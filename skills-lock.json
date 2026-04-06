@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "skills": {
+    "crm-hygiene": {
+      "source": "guia-matthieu/clawfu-skills",
+      "sourceType": "github",
+      "computedHash": "3edcd4039f9d39a639cfdb868b63cdf0d9d34c59583dd9ec69c13143ffb7ba6f"
+    }
+  }
+}
