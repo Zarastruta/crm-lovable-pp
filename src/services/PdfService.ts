@@ -108,9 +108,10 @@ export const generateOrcamentoPdf = (
   
   // Logotipo Oficial PratesPaiva - Horizontal à Esquerda (Versão Limpa)
   try {
-    const logoWidth = 60; 
-    const logoHeight = 16;
-    doc.addImage(logoPratesPaiva, 'PNG', marginLeft, 12, logoWidth, logoHeight);
+    const imgProps = doc.getImageProperties(logoPratesPaiva);
+    const logoHeight = 18; 
+    const logoWidth = (imgProps.width * logoHeight) / imgProps.height;
+    doc.addImage(logoPratesPaiva, 'PNG', marginLeft, 10, logoWidth, logoHeight);
   } catch (err) {
     console.error("Erro ao carregar logo no PDF:", err);
     doc.setTextColor(COLORS.GRAFITE);
@@ -123,9 +124,8 @@ export const generateOrcamentoPdf = (
   doc.setTextColor(COLORS.GRAFITE);
   doc.setFontSize(14);
   setSafeFont("Oswald", "bold");
-  doc.setCharSpace(1.5); // Tracking largo sugerido no manual
+  // Removido setCharSpace pois no jsPDF ele empurra a bounding-box direita para fora da folha ("torto")
   doc.text("PROPOSTA DE SERVIÇOS", pageWidth - marginLeft, 20, { align: 'right' });
-  doc.setCharSpace(0); // Reset tracking
   
   doc.setTextColor(COLORS.CONCRETO);
   doc.setFontSize(8);
@@ -172,7 +172,7 @@ export const generateOrcamentoPdf = (
     doc.setFontSize(10);
     const splitDesc = doc.splitTextToSize(orcamento.descricao, pageWidth - 40);
     doc.text(splitDesc, marginLeft, currentY + 7);
-    currentY += 10 + (splitDesc.length * 5);
+    currentY += 10 + (splitDesc.length * 6); // Aumentado multiplicador (Line Height de fonte 10)
   }
   
   // ==========================================
@@ -294,7 +294,7 @@ export const generateOrcamentoPdf = (
       doc.setFont("Barlow-Light", "normal");
       const extSplit = doc.splitTextToSize(orcamento.exclusoes, pageWidth - 40);
       doc.text(extSplit, marginLeft, offset + 5);
-      offset += 10 + (extSplit.length * 4);
+      offset += 8 + (extSplit.length * 5); // Aumentado multiplicador (Line Height de fonte 9)
     }
     
     if (orcamento.responsabilidades) {
@@ -303,7 +303,7 @@ export const generateOrcamentoPdf = (
       doc.setFont("Barlow-Light", "normal");
       const respSplit = doc.splitTextToSize(orcamento.responsabilidades, pageWidth - 40);
       doc.text(respSplit, marginLeft, offset + 5);
-      offset += 10 + (respSplit.length * 4);
+      offset += 8 + (respSplit.length * 5);
     }
     currentY = offset + 5;
   }
