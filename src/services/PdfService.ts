@@ -146,7 +146,7 @@ export const generateOrcamentoPdf = (
     body: [
       [`PROPOSTA Nº: P-${(orcamento.id || 'TEMP').substring(0, 6).toUpperCase()}`, `DATA: ${orcamento.data_emissao ? formatDate(orcamento.data_emissao) : '-'}`],
       [`CLIENTE: ${cliente?.nome || 'Não informado'}`, `LOCAL: ${condominio?.nome || 'Obra Direta'}`],
-      [`ENDEREÇO: ${orcamento.endereco_obra || '-'}`, `SÍNDICO: ${orcamento.sindicoId ? 'Atribuído' : '-'}`]
+      [`ENDEREÇO: ${orcamento.endereco_obra || '-'}`, condominio ? `SÍNDICO: ${orcamento.sindicoId ? 'Atribuído' : '-'}` : '']
     ],
     theme: 'plain',
     styles: { font: 'Barlow', fontSize: 10, cellPadding: 2, textColor: [50, 50, 50] }

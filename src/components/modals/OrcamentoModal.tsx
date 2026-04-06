@@ -209,6 +209,7 @@ export function OrcamentoModal({ open, onClose, orcamento, initialClienteId }: P
     setIsSaving(true);
     
     const payload = {
+      numero: orcamento?.numero || 0,
       titulo: form.titulo,
       descricao: form.descricao,
       status: form.status,
@@ -348,7 +349,13 @@ export function OrcamentoModal({ open, onClose, orcamento, initialClienteId }: P
                     <h3 className="font-oswald uppercase text-xs font-bold text-muted-foreground tracking-widest border-b border-border/50 pb-2">Vínculos de Cliente</h3>
                     <div className="space-y-1.5">
                       <Label className="text-xs font-barlow">Condomínio</Label>
-                      <Select value={form.condominioId ?? "_none"} onValueChange={(v) => setForm({ ...form, condominioId: v === "_none" ? null : v })}>
+                      <Select value={form.condominioId ?? "_none"} onValueChange={(v) => {
+                        if (v === "_none") {
+                          setForm({ ...form, condominioId: null, sindicoId: null });
+                        } else {
+                          setForm({ ...form, condominioId: v });
+                        }
+                      }}>
                         <SelectTrigger className="h-9"><SelectValue placeholder="Selecionar Condomínio" /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="_none">Nenhum</SelectItem>
@@ -371,16 +378,18 @@ export function OrcamentoModal({ open, onClose, orcamento, initialClienteId }: P
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-barlow">Síndico Responsável</Label>
-                      <Select value={form.sindicoId ?? "_none"} onValueChange={(v) => setForm({ ...form, sindicoId: v === "_none" ? null : v })}>
-                        <SelectTrigger className="h-9"><SelectValue placeholder="Selecionar Síndico" /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="_none">Nenhum</SelectItem>
-                          {clientes.filter((c) => c.tipo === "sindico").map((c) => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </div>
+                    {form.condominioId && (
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-barlow">Síndico Responsável</Label>
+                        <Select value={form.sindicoId ?? "_none"} onValueChange={(v) => setForm({ ...form, sindicoId: v === "_none" ? null : v })}>
+                          <SelectTrigger className="h-9"><SelectValue placeholder="Selecionar Síndico" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="_none">Nenhum</SelectItem>
+                            {clientes.filter((c) => c.tipo === "sindico").map((c) => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
                   </div>
                 </div>
 
