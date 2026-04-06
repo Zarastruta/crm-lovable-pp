@@ -12,7 +12,7 @@ import { ContatoModal } from "@/components/modals/ContatoModal";
 export default function ContatoDetalhe() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { contatos, condominios, trabalhos, orcamentos, deleteContato } = useApp();
+  const { clientes: contatos, condominios, trabalhos, orcamentos, deleteCliente: deleteContato } = useApp();
   const [editOpen, setEditOpen] = useState(false);
   const [orcamentoOpen, setOrcamentoOpen] = useState(false);
 
