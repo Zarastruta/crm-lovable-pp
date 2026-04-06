@@ -14,7 +14,6 @@ interface jsPDFWithAutoTable extends jsPDF {
   lastAutoTable: {
     finalY: number;
   };
-  setCharSpace: (space: number) => jsPDF;
 }
 
 export const generateOrcamentoPdf = (
@@ -108,9 +107,8 @@ export const generateOrcamentoPdf = (
   
   // Logotipo Oficial PratesPaiva - Horizontal à Esquerda (Versão Limpa)
   try {
-    const imgProps = doc.getImageProperties(logoPratesPaiva);
-    const logoHeight = 18; 
-    const logoWidth = (imgProps.width * logoHeight) / imgProps.height;
+    const logoWidth = 71; 
+    const logoHeight = 18;
     doc.addImage(logoPratesPaiva, 'PNG', marginLeft, 10, logoWidth, logoHeight);
   } catch (err) {
     console.error("Erro ao carregar logo no PDF:", err);
@@ -141,9 +139,7 @@ export const generateOrcamentoPdf = (
   doc.setTextColor(33, 33, 33);
   doc.setFontSize(11);
   setSafeFont("Oswald", "bold");
-  doc.setCharSpace(1);
   doc.text("IDENTIFICAÇÃO DA OBRA", marginLeft, contextY);
-  doc.setCharSpace(0);
   
   autoTable(doc, {
     startY: contextY + 5,
@@ -164,9 +160,7 @@ export const generateOrcamentoPdf = (
   if (orcamento.descricao) {
     setSafeFont("Oswald", "bold");
     doc.setFontSize(10);
-    doc.setCharSpace(1);
     doc.text("OBJETIVO DO PROJETO", marginLeft, currentY);
-    doc.setCharSpace(0);
     
     setSafeFont("Barlow-Light", "normal");
     doc.setFontSize(10);
@@ -181,9 +175,7 @@ export const generateOrcamentoPdf = (
   currentY += 10;
   setSafeFont("Oswald", "bold");
   doc.setFontSize(11);
-  doc.setCharSpace(1);
   doc.text("ESCOPO DETALHADO DOS SERVIÇOS", marginLeft, currentY);
-  doc.setCharSpace(0);
   
   const autoTableData = items.map((it, index) => {
     const totalItem = (it.quantidade || 0) * (it.valor_unitario || 0);
@@ -251,9 +243,7 @@ export const generateOrcamentoPdf = (
   // Prazos e Condições
   setSafeFont("Oswald", "bold");
   doc.setFontSize(10);
-  doc.setCharSpace(1);
   doc.text("PRAZOS E CONDIÇÕES COMERCIAIS", marginLeft, currentY);
-  doc.setCharSpace(0);
 
   const prazosBody = [];
   if (orcamento.condicoes_pagamento) prazosBody.push(['CONDIÇÕES DE PAGAMENTO:', orcamento.condicoes_pagamento]);
@@ -281,9 +271,7 @@ export const generateOrcamentoPdf = (
   if (orcamento.exclusoes || orcamento.responsabilidades) {
     doc.setFont("Oswald", "bold");
     doc.setFontSize(10);
-    doc.setCharSpace(1);
     doc.text("CLÁUSULAS E OBSERVAÇÕES", marginLeft, currentY);
-    doc.setCharSpace(0);
     let offset = currentY + 7;
     
     doc.setFontSize(9);
