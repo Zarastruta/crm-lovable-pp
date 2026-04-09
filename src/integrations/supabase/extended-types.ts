@@ -93,6 +93,8 @@ export type ExtendedDatabase = Database & {
           valor_base_sugerido: number;
           custo_padrao: number;
           prestador_padrao_id: string | null;
+          categoria: string | null;
+          subcategoria: string | null;
           criado_em: string;
         };
         Insert: {
@@ -102,6 +104,8 @@ export type ExtendedDatabase = Database & {
           valor_base_sugerido?: number;
           custo_padrao?: number;
           prestador_padrao_id?: string | null;
+          categoria?: string | null;
+          subcategoria?: string | null;
           criado_em?: string;
         };
         Update: {
@@ -111,6 +115,8 @@ export type ExtendedDatabase = Database & {
           valor_base_sugerido?: number;
           custo_padrao?: number;
           prestador_padrao_id?: string | null;
+          categoria?: string | null;
+          subcategoria?: string | null;
           criado_em?: string;
         };
         Relationships: [
@@ -122,6 +128,42 @@ export type ExtendedDatabase = Database & {
             referencedColumns: ["id"];
           }
         ];
+      };
+      ponto_diario: {
+        Row: {
+          id: string;
+          funcionario_id: string;
+          trabalho_id: string | null;
+          data: string;
+          tipo_dia: string;
+          valor_diaria: number;
+          custo_total: number;
+          observacoes: string | null;
+          criado_em: string;
+        };
+        Insert: {
+          id?: string;
+          funcionario_id: string;
+          trabalho_id?: string | null;
+          data: string;
+          tipo_dia?: string;
+          valor_diaria: number;
+          custo_total: number;
+          observacoes?: string | null;
+          criado_em?: string;
+        };
+        Update: {
+          id?: string;
+          funcionario_id?: string;
+          trabalho_id?: string | null;
+          data?: string;
+          tipo_dia?: string;
+          valor_diaria?: number;
+          custo_total?: number;
+          observacoes?: string | null;
+          criado_em?: string;
+        };
+        Relationships: [];
       };
       orcamento_itens: {
         Row: {

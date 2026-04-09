@@ -9,6 +9,7 @@ import {
   X,
   Hammer,
   Package,
+  ClipboardList,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useApp } from "@/context/AppContext";
@@ -44,6 +45,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         { to: "/trabalhos", icon: Wrench, label: "Trabalhos", badge: 0 },
         { to: "/ferramentas", icon: Hammer, label: "Ferramentas", badge: 0 },
         { to: "/equipe", icon: Users, label: "Equipe", badge: 0 },
+        { to: "/ponto", icon: ClipboardList, label: "Ponto Diário", badge: 0 },
         { to: "/condominios", icon: Building2, label: "Condomínios", badge: 0 },
       ]
     },

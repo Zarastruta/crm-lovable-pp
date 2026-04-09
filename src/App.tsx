@@ -23,6 +23,7 @@ const Financeiro = lazy(() => import("@/pages/Financeiro"));
 const Equipe = lazy(() => import("@/pages/Equipe"));
 const Ferramentas = lazy(() => import("@/pages/Ferramentas"));
 const CatalogoServicos = lazy(() => import("./pages/CatalogoServicos"));
+const ControleDiario = lazy(() => import("@/pages/ControleDiario"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 
 const queryClient = new QueryClient();
@@ -68,6 +69,7 @@ function AppRoutes() {
           <Route path="/equipe" element={<Equipe />} />
           <Route path="/ferramentas" element={<Ferramentas />} />
           <Route path="/catalogo" element={<CatalogoServicos />} />
+          <Route path="/ponto" element={<ControleDiario />} />
         </Route>
         <Route path="*" element={<NotFound />} />
       </Routes>

@@ -144,8 +144,8 @@ export default function Financeiro() {
             <h2 className="font-bold font-oswald uppercase text-xs tracking-widest">Desempenho por Período</h2>
             <span className="text-[9px] text-muted-foreground font-barlow uppercase">Clique no mês para ver o relatório</span>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+          <div className="overflow-x-auto w-full pb-2">
+            <table className="w-full text-sm min-w-[600px]">
               <thead>
                 <tr className="border-b border-border bg-muted/30">
                   <th className="text-left px-6 py-4 font-bold font-oswald uppercase text-[10px] tracking-wider text-muted-foreground">Mês</th>

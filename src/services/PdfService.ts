@@ -21,7 +21,8 @@ export const generateOrcamentoPdf = (
   items: OrcamentoItem[],
   cliente?: Cliente,
   condominio?: Condominio,
-  ocultarUnitarios: boolean = false
+  ocultarUnitarios: boolean = false,
+  sindico?: Cliente
 ) => {
   const doc = new jsPDF({ orientation: "p", unit: "mm", format: "a4" }) as jsPDFWithAutoTable;
   
@@ -144,9 +145,11 @@ export const generateOrcamentoPdf = (
   autoTable(doc, {
     startY: contextY + 5,
     body: [
-      [`PROPOSTA Nº: P-${(orcamento.id || 'TEMP').substring(0, 6).toUpperCase()}`, `DATA: ${orcamento.data_emissao ? formatDate(orcamento.data_emissao) : '-'}`],
+      // P2: usa o numero sequencial, não o UUID
+      [`PROPOSTA Nº: #${orcamento.numero || orcamento.id.substring(0,6).toUpperCase()}`, `DATA: ${orcamento.data_emissao ? formatDate(orcamento.data_emissao) : '-'}`],
       [`CLIENTE: ${cliente?.nome || 'Não informado'}`, `LOCAL: ${condominio?.nome || 'Obra Direta'}`],
-      [`ENDEREÇO: ${orcamento.endereco_obra || '-'}`, condominio ? `SÍNDICO: ${orcamento.sindicoId ? 'Atribuído' : '-'}` : '']
+      // M3: exibe o nome do síndico real em vez de "Atribuído"
+      [`ENDEREÇO: ${orcamento.endereco_obra || '-'}`, condominio ? `SÍNDICO: ${sindico?.nome || 'Não definido'}` : '']
     ],
     theme: 'plain',
     styles: { font: 'Barlow', fontSize: 10, cellPadding: 2, textColor: [50, 50, 50] }

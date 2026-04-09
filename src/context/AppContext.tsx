@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, ReactNode } from "react";
-import { 
+import {
   Cliente, Condominio, Trabalho, Orcamento, Funcionario, Ferramenta, CatalogoServico
 } from "@/types";
 import { toast } from "sonner";
@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { User } from "@supabase/supabase-js";
 import {
   AppContext, useApp,
-  mapCliente, mapCondominio, mapTrabalho, mapOrcamento, mapFuncionario, mapFerramenta, mapCatalogoServico
+  mapCliente, mapCondominio, mapTrabalho, mapOrcamento, mapFuncionario, mapFerramenta, mapCatalogoServico, mapPontoDiario
 } from "./AppContextTypes";
 // eslint-disable-next-line react-refresh/only-export-components
 export { useApp };
@@ -23,6 +23,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [funcionarios, setFuncionarios] = useState<Funcionario[]>([]);
   const [ferramentas, setFerramentas] = useState<Ferramenta[]>([]);
   const [catalogoServicos, setCatalogoServicos] = useState<CatalogoServico[]>([]);
+  const [pontoDiario, setPontoDiario] = useState<import("@/types").PontoDiario[]>([]);
   const [dataLoading, setDataLoading] = useState(false);
 
   const isLoggedIn = !!user;
@@ -91,6 +92,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [user]);
 
+  const fetchPontoDiario = useCallback(async () => {
+    if (!user) return;
+    const { data, error } = await supabase.from("ponto_diario").select("*").order("data", { ascending: false });
+    if (!error && data) {
+      setPontoDiario(data.map(mapPontoDiario));
+    } else if (error?.code === "42P01") {
+      console.warn("Tabela 'ponto_diario' não encontrada.");
+    }
+  }, [user]);
+
   const fetchAll = useCallback(async () => {
     if (!user) return;
     setDataLoading(true);
@@ -103,13 +114,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
         fetchFuncionarios(),
         fetchFerramentas(),
         fetchCatalogoServicos(),
+        fetchPontoDiario(),
       ]);
     } catch (error) {
       console.error("Erro ao carregar dados:", error);
     } finally {
       setDataLoading(false);
     }
-  }, [user, fetchClientes, fetchCondominios, fetchTrabalhos, fetchOrcamentos, fetchFuncionarios, fetchFerramentas, fetchCatalogoServicos]);
+  }, [user, fetchClientes, fetchCondominios, fetchTrabalhos, fetchOrcamentos, fetchFuncionarios, fetchFerramentas, fetchCatalogoServicos, fetchPontoDiario]);
 
   useEffect(() => {
     if (user) fetchAll();
@@ -130,6 +142,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setFuncionarios([]);
     setFerramentas([]);
     setCatalogoServicos([]);
+    setPontoDiario([]);
   };
 
   type TableName = keyof ExtendedDatabase["public"]["Tables"];
@@ -254,6 +267,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
         updateCatalogoServico: (id, s) => handleUpdate("catalogo_servicos", id, s, "Catálogo atualizado!", fetchCatalogoServicos),
         deleteCatalogoServico: (id) => handleDelete("catalogo_servicos", id, "Serviço removido do catálogo!", fetchCatalogoServicos),
         refreshCatalogoServicos: fetchCatalogoServicos,
+
+        pontoDiario,
+        addPontoDiario: (p) => handleAdd("ponto_diario", p, "Ponto registrado!", fetchPontoDiario),
+        updatePontoDiario: (id, p) => handleUpdate("ponto_diario", id, p, "Ponto atualizado!", fetchPontoDiario),
+        deletePontoDiario: (id) => handleDelete("ponto_diario", id, "Ponto removido!", fetchPontoDiario),
+        refreshPontoDiario: fetchPontoDiario,
 
         refreshAll: fetchAll,
       }}

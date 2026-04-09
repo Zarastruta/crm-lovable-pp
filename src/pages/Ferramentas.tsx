@@ -115,8 +115,8 @@ export default function Ferramentas() {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+        <div className="overflow-x-auto w-full pb-2">
+          <table className="w-full text-sm min-w-[700px]">
             <thead>
               <tr className="border-b border-border bg-muted/30">
                 <th className="text-left px-6 py-4 font-bold font-oswald uppercase text-[10px] tracking-wider text-muted-foreground">Item / Nome</th>

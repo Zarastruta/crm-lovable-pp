@@ -1,9 +1,13 @@
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CalendarIcon, Plus, Trash2, Tag, Save, ArrowRight, User, HelpCircle, Info, CheckCircle2, ChevronLeft, ChevronRight, UserPlus } from "lucide-react";
+import {
+  CalendarIcon, Plus, Trash2, Tag, Save, ArrowRight, User, HelpCircle,
+  Info, CheckCircle2, ChevronLeft, ChevronRight, UserPlus, Building2,
+  Search, PackageOpen, Users,
+} from "lucide-react";
 import { useApp } from "@/context/AppContext";
-import { Orcamento, StatusOrcamento, CatalogoServico, OrcamentoItem } from "@/types";
+import { Orcamento, StatusOrcamento, OrcamentoItem } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,22 +25,35 @@ import {
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { addDays } from "date-fns";
 import { ContatoModal } from "./ContatoModal";
+import { CondominioModal } from "./CondominioModal";
 
 const DEFAULT_CONDICOES = "Entrada de 50% na aprovação e 50% na conclusão dos serviços.";
 const DEFAULT_PRAZO = "Aproximadamente 15 dias úteis após a aprovação e liberação do local.";
 const DEFAULT_EXCLUSOES = "Fornecimento de materiais de acabamento (pisos, louças, metais), caçamba de entulho, regularização em órgãos públicos e taxas extras de condomínio.";
 const DEFAULT_RESPONSABILIDADES = "O cliente deve garantir o livre acesso da equipe ao local em horário comercial, fornecer água e energia elétrica, e remover objetos pessoais frágeis da área de obra.";
 
-interface Props {
-  open: boolean;
-  onClose: () => void;
-  orcamento?: Orcamento;
-  initialClienteId?: string;
-}
+const UNIDADES_COMUNS = [
+  { value: "m²", label: "m² — Metro quadrado" },
+  { value: "m", label: "m — Metro linear" },
+  { value: "m³", label: "m³ — Metro cúbico" },
+  { value: "un", label: "un — Unidade" },
+  { value: "h", label: "h — Hora" },
+  { value: "vb", label: "vb — Verba" },
+  { value: "kg", label: "kg — Quilograma" },
+  { value: "pç", label: "pç — Peça" },
+  { value: "sc", label: "sc — Saco" },
+  { value: "cx", label: "cx — Caixa" },
+  { value: "l", label: "l — Litro" },
+  { value: "pt", label: "pt — Ponto" },
+];
+
+const TAB_ORDER = ["dados", "servicos", "prazos", "clausulas", "revisao"] as const;
+type TabKey = typeof TAB_ORDER[number];
 
 const statusOptions: { value: StatusOrcamento; label: string }[] = [
   { value: "rascunho", label: "Rascunho" },
@@ -47,10 +64,17 @@ const statusOptions: { value: StatusOrcamento; label: string }[] = [
   { value: "convertido", label: "Convertido" },
 ];
 
+interface Props {
+  open: boolean;
+  onClose: () => void;
+  orcamento?: Orcamento;
+  initialClienteId?: string;
+}
+
 export function OrcamentoModal({ open, onClose, orcamento, initialClienteId }: Props) {
-  const { addOrcamento, updateOrcamento, condominios, clientes, catalogoServicos, funcionarios, refreshAll } = useApp();
+  const { addOrcamento, updateOrcamento, condominios, clientes, catalogoServicos, refreshAll } = useApp();
   const isEdit = !!orcamento;
-  const [activeTab, setActiveTab] = useState("dados");
+  const [activeTab, setActiveTab] = useState<TabKey>("dados");
 
   const [form, setForm] = useState({
     titulo: "",
@@ -74,10 +98,17 @@ export function OrcamentoModal({ open, onClose, orcamento, initialClienteId }: P
   });
 
   const [items, setItems] = useState<Partial<OrcamentoItem>[]>([]);
-  const [loadingItems, setLoadingItems] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [newClientModalOpen, setNewClientModalOpen] = useState(false);
+  const [newCondominioModalOpen, setNewCondominioModalOpen] = useState(false);
+  const [catalogoAberto, setCatalogoAberto] = useState(false);
 
+  // ─── Cliente selecionado e tipo ───────────────────────────────────────────
+  const clienteSelecionado = clientes.find(c => c.id === form.clienteId);
+  const clienteTipo = clienteSelecionado?.tipo;
+  const precisaCondominio = clienteTipo === "sindico" || clienteTipo === "administradora";
+
+  // ─── Reset ao abrir ────────────────────────────────────────────────────────
   useEffect(() => {
     if (open) {
       setActiveTab("dados");
@@ -106,16 +137,16 @@ export function OrcamentoModal({ open, onClose, orcamento, initialClienteId }: P
       } else {
         setForm({
           titulo: "", descricao: "", status: "rascunho",
-          data_emissao: new Date(), 
-          validade: addDays(new Date(), 10), 
+          data_emissao: new Date(),
+          validade: addDays(new Date(), 10),
           valor: 0,
           observacoes: "", condominioId: null, clienteId: initialClienteId || null,
           sindicoId: null, endereco_obra: "", motivo_recusa: "",
-          data_aprovacao: null, 
-          condicoes_pagamento: DEFAULT_CONDICOES, 
+          data_aprovacao: null,
+          condicoes_pagamento: DEFAULT_CONDICOES,
           prazo_execucao: DEFAULT_PRAZO,
-          data_prevista_inicio: addDays(new Date(), 7), 
-          exclusoes: DEFAULT_EXCLUSOES, 
+          data_prevista_inicio: addDays(new Date(), 7),
+          exclusoes: DEFAULT_EXCLUSOES,
           responsabilidades: DEFAULT_RESPONSABILIDADES,
         });
         setItems([]);
@@ -124,19 +155,57 @@ export function OrcamentoModal({ open, onClose, orcamento, initialClienteId }: P
   }, [orcamento, open, initialClienteId]);
 
   const fetchItems = async (orcID: string) => {
-    setLoadingItems(true);
-    const { data, error } = await supabase.from("orcamento_itens").select("*").eq("orcamento_id", orcID).order("criado_em", { ascending: true });
-    if (!error && data) {
-      setItems(data);
-    }
-    setLoadingItems(false);
+    const { data, error } = await supabase
+      .from("orcamento_itens").select("*")
+      .eq("orcamento_id", orcID).order("criado_em", { ascending: true });
+    if (!error && data) setItems(data);
   };
 
+  // ─── Handlers de cliente e condomínio com lógica inteligente ──────────────
+  const handleClienteChange = (v: string) => {
+    const novoCliente = clientes.find(c => c.id === v);
+    const updates: Partial<typeof form> = { clienteId: v === "_none" ? null : v };
+
+    // Se não é síndico nem administradora, limpa vínculo com condomínio
+    if (!novoCliente || (novoCliente.tipo !== "sindico" && novoCliente.tipo !== "administradora")) {
+      updates.condominioId = null;
+      updates.sindicoId = null;
+    }
+    // Se é síndico, auto-preenche sindicoId com ele mesmo
+    if (novoCliente?.tipo === "sindico") {
+      updates.sindicoId = v === "_none" ? null : v;
+    }
+    // M2: Auto-sugere título baseado no cliente (se o título ainda está vazio)
+    if (novoCliente && !form.titulo) {
+      updates.titulo = `Proposta de Serviços - ${novoCliente.nome}`;
+    }
+
+    setForm(prev => ({ ...prev, ...updates }));
+  };
+
+  const handleCondominioChange = (v: string) => {
+    const cond = condominios.find(c => c.id === v);
+    const updates: Partial<typeof form> = {
+      condominioId: v === "_none" ? null : v,
+      sindicoId: clienteTipo !== "sindico" ? null : form.sindicoId,
+    };
+    // Auto-preenche endereço se estiver vazio
+    if (cond?.endereco && !form.endereco_obra) {
+      updates.endereco_obra = cond.endereco;
+    }
+    // M2: Auto-refina o título se condomínio selecionado
+    const clienteAtual = clientes.find(c => c.id === form.clienteId);
+    if (cond && (form.titulo === "" || form.titulo === `Proposta de Serviços - ${clienteAtual?.nome || ''}` )) {
+      updates.titulo = `Manutenção Predial - ${cond.nome}`;
+    }
+    setForm(prev => ({ ...prev, ...updates }));
+  };
+
+  // ─── Itens ────────────────────────────────────────────────────────────────
   const addItemFromCatalogo = (servicoId: string) => {
     const srv = catalogoServicos.find(s => s.id === servicoId);
     if (!srv) return;
-    
-    setItems((prev) => [
+    setItems(prev => [
       ...prev,
       {
         id: crypto.randomUUID(),
@@ -147,23 +216,14 @@ export function OrcamentoModal({ open, onClose, orcamento, initialClienteId }: P
         valor_unitario: srv.valor_base_sugerido,
         custo_unitario: srv.custo_padrao,
         funcionario_id: srv.prestador_padrao_id,
-      }
+      },
     ]);
   };
 
   const addAvulsoItem = () => {
-    setItems((prev) => [
+    setItems(prev => [
       ...prev,
-      {
-        id: crypto.randomUUID(),
-        servico_id: null,
-        nome: "",
-        unidade: "un",
-        quantidade: 1,
-        valor_unitario: 0,
-        custo_unitario: 0,
-        funcionario_id: null,
-      }
+      { id: crypto.randomUUID(), servico_id: null, nome: "", unidade: "un", quantidade: 1, valor_unitario: 0, custo_unitario: 0, funcionario_id: null },
     ]);
   };
 
@@ -179,35 +239,35 @@ export function OrcamentoModal({ open, onClose, orcamento, initialClienteId }: P
     setItems(prev => prev.filter((_, i) => i !== index));
   };
 
-  const calculateTotals = () => {
-    const totalVenda = items.reduce((acc, it) => acc + ((it.valor_unitario || 0) * (it.quantidade || 1)), 0);
-    const totalCusto = items.reduce((acc, it) => acc + ((it.custo_unitario || 0) * (it.quantidade || 1)), 0);
-    const lucro = totalVenda - totalCusto;
-    const margemPercentual = totalVenda > 0 ? (lucro / totalVenda) * 100 : 0;
-    return { totalVenda, totalCusto, lucro, margemPercentual };
-  };
-
-  const { totalVenda, totalCusto, lucro, margemPercentual } = calculateTotals();
+  // ─── Totais ───────────────────────────────────────────────────────────────
+  // Usa || 1 consistentemente em ambos os lugares
+  const totalVenda = items.reduce((acc, it) => acc + ((it.valor_unitario || 0) * (it.quantidade || 1)), 0);
+  const totalCusto = items.reduce((acc, it) => acc + ((it.custo_unitario || 0) * (it.quantidade || 1)), 0);
+  const lucro = totalVenda - totalCusto;
+  const margemPercentual = totalVenda > 0 ? (lucro / totalVenda) * 100 : 0;
 
   const applyAutomaticMargin = (percent: number) => {
     setItems(prev => prev.map(it => ({
       ...it,
-      valor_unitario: (it.custo_unitario || 0) * (1 + (percent / 100))
+      valor_unitario: (it.custo_unitario || 0) * (1 + percent / 100),
     })));
-    toast.success(`Margem de ${percent}% aplicada com sucesso!`);
+    toast.success(`Margem de ${percent}% aplicada!`);
   };
 
-  // Auto-sync form value with items
+  // Auto-sync valor com itens (sempre, sem condicional)
   useEffect(() => {
-    if (items.length > 0) {
-      setForm(prev => ({ ...prev, valor: totalVenda }));
-    }
-  }, [totalVenda, items.length]);
+    setForm(prev => ({ ...prev, valor: totalVenda }));
+  }, [totalVenda]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // ─── Submit ───────────────────────────────────────────────────────────────
+  const handleSubmit = async () => {
+    if (!form.titulo.trim()) {
+      toast.error("O título da proposta é obrigatório.");
+      setActiveTab("dados");
+      return;
+    }
     setIsSaving(true);
-    
+
     const payload = {
       numero: orcamento?.numero || 0,
       titulo: form.titulo,
@@ -241,30 +301,23 @@ export function OrcamentoModal({ open, onClose, orcamento, initialClienteId }: P
         if (novoID) savedOrcID = novoID;
       }
 
-      // Sync items
       if (savedOrcID) {
-        // Delete all old items
         const { error: delError } = await supabase.from("orcamento_itens").delete().eq("orcamento_id", savedOrcID);
-        if (delError) {
-          throw new Error("Falha ao limpar itens antigos: " + delError.message);
-        }
-        
-        // Insert new ones
+        if (delError) throw new Error("Falha ao limpar itens: " + delError.message);
+
         if (items.length > 0) {
           const insertPayload = items.map(it => ({
             orcamento_id: savedOrcID as string,
-            servico_id: it.servico_id,
+            servico_id: it.servico_id ?? null,
             nome: it.nome,
             unidade: it.unidade,
             quantidade: it.quantidade,
             valor_unitario: it.valor_unitario,
             custo_unitario: it.custo_unitario,
-            funcionario_id: it.funcionario_id,
+            funcionario_id: it.funcionario_id ?? null,
           }));
           const { error: insError } = await supabase.from("orcamento_itens").insert(insertPayload);
-          if (insError) {
-             throw new Error("Falha ao salvar itens: " + insError.message);
-          }
+          if (insError) throw new Error("Falha ao salvar itens: " + insError.message);
         }
       }
       onClose();
@@ -277,237 +330,425 @@ export function OrcamentoModal({ open, onClose, orcamento, initialClienteId }: P
     }
   };
 
-  const formatCurrencyLabel = (val: number) => 
+  // ─── Navegação entre tabs ─────────────────────────────────────────────────
+  const goNext = () => {
+    const idx = TAB_ORDER.indexOf(activeTab);
+    if (idx < TAB_ORDER.length - 1) setActiveTab(TAB_ORDER[idx + 1]);
+  };
+  const goPrev = () => {
+    const idx = TAB_ORDER.indexOf(activeTab);
+    if (idx > 0) setActiveTab(TAB_ORDER[idx - 1]);
+  };
+  const stepNumber = TAB_ORDER.indexOf(activeTab) + 1;
+
+  const fmt = (val: number) =>
     new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(val);
 
+  // ─── Render ───────────────────────────────────────────────────────────────
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent onInteractOutside={(e) => e.preventDefault()} className="max-w-[900px] max-h-[90vh] overflow-y-auto w-full p-0 gap-0 bg-background rounded-2xl shadow-2xl">
+      <DialogContent
+        onInteractOutside={(e) => e.preventDefault()}
+        className="max-w-[900px] max-h-[90vh] overflow-y-auto w-full p-0 gap-0 bg-background rounded-2xl shadow-2xl"
+      >
         <div className="flex flex-col h-full max-h-[90vh]">
-          
+
+          {/* Header */}
           <DialogHeader className="px-6 py-4 border-b border-border bg-muted/20 shrink-0">
-            <div className="flex items-center justify-between">
-              <div>
-                <DialogTitle className="text-2xl font-bold font-oswald uppercase tracking-tight">
-                  {isEdit ? "Editar Orçamento (Padrão Ouro)" : "Novo Orçamento (Padrão Ouro)"}
-                </DialogTitle>
-                <p className="text-xs text-muted-foreground font-barlow tracking-widest uppercase">Gerador Inteligente e Cálculo de Margem</p>
-              </div>
-            </div>
+            <DialogTitle className="text-2xl font-bold font-oswald uppercase tracking-tight">
+              {isEdit ? "Editar Orçamento (Padrão Ouro)" : "Novo Orçamento (Padrão Ouro)"}
+            </DialogTitle>
+            <p className="text-xs text-muted-foreground font-barlow tracking-widest uppercase">Gerador Inteligente e Cálculo de Margem</p>
           </DialogHeader>
 
+          {/* Barra de progresso */}
           <div className="px-6 py-3 border-b border-border bg-card shrink-0">
             <div className="flex items-center justify-between mb-2">
               <span className="text-[10px] font-bold font-oswald uppercase tracking-[0.2em] text-muted-foreground">
-                Passo {activeTab === "dados" ? "1" : activeTab === "servicos" ? "2" : activeTab === "prazos" ? "3" : "4"} de 4
+                Passo {stepNumber} de 5
               </span>
               <span className="text-[10px] font-bold font-oswald uppercase tracking-[0.2em] text-primary">
-                {Math.round((activeTab === "dados" ? 1 : activeTab === "servicos" ? 2 : activeTab === "prazos" ? 3 : 4) / 4 * 100)}% concluído
+                {Math.round(stepNumber / 5 * 100)}% concluído
               </span>
             </div>
-            <Progress value={(activeTab === "dados" ? 1 : activeTab === "servicos" ? 2 : activeTab === "prazos" ? 3 : 4) / 4 * 100} className="h-1.5 bg-muted" />
+            <Progress value={stepNumber / 5 * 100} className="h-1.5 bg-muted" />
           </div>
 
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
-
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabKey)} className="flex-1 flex flex-col min-h-0">
             <div className="flex-1 overflow-y-auto p-6 bg-card">
-              
+
+              {/* ── PASSO 1: Identidade e Local ── */}
               <TabsContent value="dados" className="m-0 space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
                 <div className="pb-4 border-b border-border/50">
                   <h2 className="text-xl font-bold font-oswald uppercase text-primary flex items-center gap-2">
                     <User className="h-5 w-5" /> 1. O Início: Identidade e Local
                   </h2>
-                  <p className="text-sm text-muted-foreground font-barlow italic">Quem é o cliente e onde a mágica vai acontecer?</p>
+                  <p className="text-sm text-muted-foreground font-barlow italic">Quem vai contratar e onde a obra vai acontecer?</p>
                 </div>
-                <div className="grid grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <div className="space-y-1.5">
-                      <Label className="uppercase text-[10px] font-bold tracking-widest text-muted-foreground flex items-center gap-1.5">
-                        Título Comercial *
-                        <TooltipProvider><Tooltip><TooltipTrigger asChild><HelpCircle className="h-3 w-3 cursor-help text-muted-foreground/50" /></TooltipTrigger><TooltipContent className="text-xs">Ex: Reforma de Sacada - Apto 202</TooltipContent></Tooltip></TooltipProvider>
-                      </Label>
-                      <Input value={form.titulo} onChange={(e) => setForm({ ...form, titulo: e.target.value })} placeholder="Ex: Reforma Cobertura Palmas" required className="font-oswald text-lg" />
+
+                {/* Bloco de vínculos — Cliente primeiro */}
+                <div className="bg-muted/30 p-5 rounded-xl border border-border space-y-4">
+                  <h3 className="font-oswald uppercase text-xs font-bold text-muted-foreground tracking-widest border-b border-border/50 pb-2">
+                    Quem Contrata?
+                  </h3>
+
+                  {/* 1. Cliente (sempre primeiro) */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-xs font-barlow font-bold">Cliente Contratante</Label>
+                      <Button type="button" variant="ghost" size="icon" className="h-5 w-5 bg-primary/10 hover:bg-primary/20" onClick={() => setNewClientModalOpen(true)} title="Novo Cliente">
+                        <UserPlus className="h-3 w-3 text-primary" />
+                      </Button>
                     </div>
-                    <div className="space-y-1.5">
-                      <Label className="uppercase text-[10px] font-bold tracking-widest text-muted-foreground">Endereço da Obra</Label>
-                      <Input value={form.endereco_obra} onChange={(e) => setForm({ ...form, endereco_obra: e.target.value })} placeholder="Endereço exato da obra..." className="font-barlow"/>
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="uppercase text-[10px] font-bold tracking-widest text-muted-foreground">Status Atual</Label>
-                      <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v as StatusOrcamento })}>
-                        <SelectTrigger className="font-oswald uppercase"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          {statusOptions.map((s) => (
-                            <SelectItem key={s.value} value={s.value} className="font-oswald uppercase">{s.label}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
+                    <Select value={form.clienteId ?? "_none"} onValueChange={handleClienteChange}>
+                      <SelectTrigger className="h-10"><SelectValue placeholder="Selecionar Cliente..." /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="_none">Nenhum</SelectItem>
+                        {clientes.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>
+                            {c.nome}
+                            <span className="ml-2 text-[10px] text-muted-foreground uppercase">({c.tipo})</span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
-                  
-                  <div className="bg-muted/30 p-4 rounded-xl border border-border space-y-4">
-                    <h3 className="font-oswald uppercase text-xs font-bold text-muted-foreground tracking-widest border-b border-border/50 pb-2">Vínculos de Cliente</h3>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-barlow">Condomínio</Label>
-                      <Select value={form.condominioId ?? "_none"} onValueChange={(v) => {
-                        if (v === "_none") {
-                          setForm({ ...form, condominioId: null, sindicoId: null });
-                        } else {
-                          setForm({ ...form, condominioId: v });
-                        }
-                      }}>
-                        <SelectTrigger className="h-9"><SelectValue placeholder="Selecionar Condomínio" /></SelectTrigger>
+
+                  {/* 2. Condomínio — apenas se síndico ou administradora */}
+                  {precisaCondominio && (
+                    <div className="space-y-1.5 animate-in fade-in duration-200">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-xs font-barlow font-bold flex items-center gap-1.5">
+                          <Building2 className="h-3 w-3 text-primary" />
+                          Condomínio
+                        </Label>
+                        <Button type="button" variant="ghost" size="icon" className="h-5 w-5 bg-primary/10 hover:bg-primary/20" onClick={() => setNewCondominioModalOpen(true)} title="Novo Condomínio">
+                          <Plus className="h-3 w-3 text-primary" />
+                        </Button>
+                      </div>
+                      <Select value={form.condominioId ?? "_none"} onValueChange={handleCondominioChange}>
+                        <SelectTrigger className="h-10"><SelectValue placeholder="Selecionar Condomínio..." /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="_none">Nenhum</SelectItem>
                           {condominios.map((c) => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <Label className="text-xs font-barlow">Cliente Contratante</Label>
-                        <Button type="button" variant="ghost" size="icon" className="h-5 w-5 bg-primary/10 hover:bg-primary/20" onClick={() => setNewClientModalOpen(true)} title="Novo Cliente">
-                          <UserPlus className="h-3 w-3 text-primary" />
-                        </Button>
-                      </div>
-                      <Select value={form.clienteId ?? "_none"} onValueChange={(v) => setForm({ ...form, clienteId: v === "_none" ? null : v })}>
-                        <SelectTrigger className="h-9"><SelectValue placeholder="Selecionar Cliente" /></SelectTrigger>
+                  )}
+
+                  {/* 3. Síndico — apenas se administradora com condomínio selecionado */}
+                  {clienteTipo === "administradora" && form.condominioId && (
+                    <div className="space-y-1.5 animate-in fade-in duration-200">
+                      <Label className="text-xs font-barlow font-bold">Síndico Responsável</Label>
+                      <Select value={form.sindicoId ?? "_none"} onValueChange={(v) => setForm(prev => ({ ...prev, sindicoId: v === "_none" ? null : v }))}>
+                        <SelectTrigger className="h-10"><SelectValue placeholder="Selecionar Síndico..." /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="_none">Nenhum</SelectItem>
-                          {clientes.map((c) => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}
+                          {clientes.filter(c => c.tipo === "sindico").map(c => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}
                         </SelectContent>
                       </Select>
                     </div>
-                    {form.condominioId && (
-                      <div className="space-y-1.5">
-                        <Label className="text-xs font-barlow">Síndico Responsável</Label>
-                        <Select value={form.sindicoId ?? "_none"} onValueChange={(v) => setForm({ ...form, sindicoId: v === "_none" ? null : v })}>
-                          <SelectTrigger className="h-9"><SelectValue placeholder="Selecionar Síndico" /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="_none">Nenhum</SelectItem>
-                            {clientes.filter((c) => c.tipo === "sindico").map((c) => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
+                  )}
+
+                  {/* Tag informativa quando síndico é auto-preenchido */}
+                  {clienteTipo === "sindico" && form.clienteId && (
+                    <p className="text-[10px] text-emerald-600 font-barlow font-bold flex items-center gap-1">
+                      <CheckCircle2 className="h-3 w-3" /> Síndico definido automaticamente como contato selecionado.
+                    </p>
+                  )}
+                </div>
+
+                {/* Título + Endereço */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label className="uppercase text-[10px] font-bold tracking-widest text-muted-foreground flex items-center gap-1.5">
+                      Título Comercial *
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild><HelpCircle className="h-3 w-3 cursor-help text-muted-foreground/50" /></TooltipTrigger>
+                          <TooltipContent className="text-xs">Ex: Reforma de Sacada – Apto 202</TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </Label>
+                    <Input
+                      value={form.titulo}
+                      onChange={(e) => setForm(prev => ({ ...prev, titulo: e.target.value }))}
+                      placeholder="Ex: Reforma Cobertura Palmas"
+                      className="font-oswald text-lg"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="uppercase text-[10px] font-bold tracking-widest text-muted-foreground">
+                      Endereço da Obra
+                      {form.condominioId && <span className="ml-1 text-emerald-600 normal-case font-normal">(preenchido do condomínio)</span>}
+                    </Label>
+                    <Input
+                      value={form.endereco_obra}
+                      onChange={(e) => setForm(prev => ({ ...prev, endereco_obra: e.target.value }))}
+                      placeholder="Endereço exato da obra..."
+                      className="font-barlow"
+                    />
                   </div>
                 </div>
 
+                {/* Descrição */}
                 <div className="space-y-1.5">
                   <Label className="uppercase text-[10px] font-bold tracking-widest text-muted-foreground">Apresentação / Descrição Inicial do Projeto</Label>
-                  <Textarea value={form.descricao} onChange={(e) => setForm({ ...form, descricao: e.target.value })} placeholder="Texto introdutório que o cliente vai ler antes da tabela de serviços..." rows={4} className="font-barlow"/>
+                  <Textarea
+                    value={form.descricao}
+                    onChange={(e) => setForm(prev => ({ ...prev, descricao: e.target.value }))}
+                    placeholder="Texto introdutório que o cliente vai ler antes da tabela de serviços..."
+                    rows={4}
+                    className="font-barlow"
+                  />
                 </div>
               </TabsContent>
 
+              {/* ── PASSO 2: Serviços ── */}
               <TabsContent value="servicos" className="m-0 flex flex-col space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
                 <div className="pb-4 border-b border-border/50">
                   <h2 className="text-xl font-bold font-oswald uppercase text-primary flex items-center gap-2">
                     <CheckCircle2 className="h-5 w-5" /> 2. O Projeto: O que faremos?
                   </h2>
-                  <p className="text-sm text-muted-foreground font-barlow italic">Liste os serviços. Os custos internos são para sua gestão; o cliente só vê o valor final.</p>
-                </div>
-                <div className="bg-muted/20 border border-border p-4 rounded-xl flex items-center justify-between">
-                  <div className="space-y-1">
-                    <h3 className="font-oswald uppercase text-sm font-bold tracking-wide">Tabela de Serviços</h3>
-                    <p className="text-[10px] font-barlow text-muted-foreground">Adicione do catálogo ou insira avulsos. Os custos internos são ocultos para o cliente.</p>
-                  </div>
-                  <div className="flex gap-2">
-                    <Select onValueChange={addItemFromCatalogo}>
-                      <SelectTrigger className="w-[200px] h-9 font-oswald uppercase text-xs font-bold bg-primary text-primary-foreground">
-                        <Tag className="mr-2 h-3.5 w-3.5" /> Do Catálogo
-                      </SelectTrigger>
-                      <SelectContent>
-                        {catalogoServicos.map(c => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                    <Button variant="outline" size="sm" onClick={addAvulsoItem} className="h-9 font-oswald uppercase font-bold text-xs">
-                      <Plus className="mr-1 h-3.5 w-3.5" /> Avulso
-                    </Button>
-                  </div>
+                  <p className="text-sm text-muted-foreground font-barlow italic">
+                    Monte a lista de serviços. O custo interno é só seu — o cliente vê apenas o preço final.
+                  </p>
                 </div>
 
-                <div className="border border-border rounded-xl overflow-hidden">
-                  <table className="w-full text-xs font-barlow text-left">
-                    <thead className="bg-muted/40 font-oswald uppercase tracking-widest text-[9px] text-muted-foreground">
-                      <tr>
-                        <th className="px-3 py-2 w-1/3">Item / Serviço</th>
-                        <th className="px-2 py-2 w-[60px] text-center">Un</th>
-                        <th className="px-2 py-2 w-[80px] text-center">Qtd</th>
-                        <th className="px-3 py-2 w-[120px] text-right">Custo Un (Interno)</th>
-                        <th className="px-3 py-2 w-[120px] text-right">Venda Un (Cliente)</th>
-                        <th className="px-3 py-2 w-[120px] text-right">Total Venda</th>
-                        <th className="px-2 py-2 w-[40px] text-center"></th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border/50">
-                      {items.map((it, idx) => (
-                        <tr key={it.id || idx} className="hover:bg-muted/10">
-                          <td className="px-3 py-2">
-                            <Input value={it.nome || ""} onChange={(e) => updateItem(idx, "nome", e.target.value)} className="h-8 text-xs font-bold uppercase disabled:opacity-75" disabled={!!it.servico_id} placeholder="Descrição..." />
-                          </td>
-                          <td className="px-2 py-2 text-center">
-                            <Input value={it.unidade || ""} onChange={(e) => updateItem(idx, "unidade", e.target.value)} className="h-8 text-[10px] text-center uppercase" />
-                          </td>
-                          <td className="px-2 py-2 text-center">
-                            <Input type="number" min={0} step="0.01" value={it.quantidade || 0} onChange={(e) => updateItem(idx, "quantidade", Number(e.target.value))} className="h-8 text-center" />
-                          </td>
-                          <td className="px-3 py-2 text-right">
-                            <CurrencyInput value={it.custo_unitario || 0} onChange={(v) => updateItem(idx, "custo_unitario", v)} className="h-8 text-right text-destructive bg-destructive/5" />
-                          </td>
-                          <td className="px-3 py-2 text-right">
-                            <CurrencyInput value={it.valor_unitario || 0} onChange={(v) => updateItem(idx, "valor_unitario", v)} className="h-8 text-right font-bold text-emerald-600 bg-emerald-500/5" />
-                          </td>
-                          <td className="px-3 py-2 text-right font-oswald font-bold text-sm bg-muted/10">
-                            {formatCurrencyLabel((it.valor_unitario || 0) * (it.quantidade || 0))}
-                          </td>
-                          <td className="px-2 py-2 text-center">
-                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:bg-destructive/10" onClick={() => removeItem(idx)}>
-                              <Trash2 className="h-3 w-3" />
+                {/* Barra de adicionar */}
+                <div className="flex gap-2">
+                  {/* Busca no catálogo */}
+                  <Popover open={catalogoAberto} onOpenChange={setCatalogoAberto}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="default"
+                        className="flex-1 justify-start gap-2 font-oswald uppercase font-bold text-xs h-10 bg-primary text-primary-foreground"
+                      >
+                        <Search className="h-3.5 w-3.5" />
+                        {catalogoServicos.length > 0
+                          ? `Buscar no Catálogo (${catalogoServicos.length} itens)`
+                          : "Catálogo vazio"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[420px] p-0" align="start" side="bottom">
+                      <Command>
+                        <CommandInput placeholder="Buscar serviço por nome ou categoria..." className="font-barlow" />
+                        <CommandList>
+                          <CommandEmpty className="py-6 text-center text-sm text-muted-foreground font-barlow">
+                            Nenhum serviço encontrado.
+                          </CommandEmpty>
+                          {/* Agrupamento por Categorias */}
+                          {Object.entries(
+                            catalogoServicos.reduce((acc, s) => {
+                              const cat = s.categoria || "Geral";
+                              if (!acc[cat]) acc[cat] = [];
+                              acc[cat].push(s);
+                              return acc;
+                            }, {} as Record<string, typeof catalogoServicos>)
+                          ).map(([cat, items]) => (
+                            <CommandGroup key={cat} heading={cat.toUpperCase()} className="font-oswald text-[10px] tracking-widest text-primary">
+                              {items.map(s => (
+                                <CommandItem
+                                  key={s.id}
+                                  value={`${cat} ${s.nome} ${s.subcategoria || ""}`}
+                                  onSelect={() => {
+                                    addItemFromCatalogo(s.id);
+                                    setCatalogoAberto(false);
+                                  }}
+                                  className="flex items-center justify-between cursor-pointer font-barlow py-2"
+                                >
+                                  <div className="flex flex-col">
+                                    <span className="font-medium text-foreground">{s.nome}</span>
+                                    {s.subcategoria && <span className="text-[9px] uppercase text-muted-foreground">{s.subcategoria}</span>}
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-[10px] font-bold px-1.5 py-0.5 bg-muted rounded">
+                                      {s.unidade_padrao}
+                                    </span>
+                                    {s.valor_base_sugerido > 0 && (
+                                      <span className="text-[10px] text-emerald-600 font-bold">
+                                        {fmt(s.valor_base_sugerido)}
+                                      </span>
+                                    )}
+                                  </div>
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          ))}
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={addAvulsoItem}
+                    className="h-10 font-oswald uppercase font-bold text-xs gap-1.5 shrink-0"
+                  >
+                    <Plus className="h-3.5 w-3.5" /> Item Avulso
+                  </Button>
+                </div>
+
+                {/* Lista de itens como cards */}
+                {items.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-16 gap-3 text-muted-foreground border-2 border-dashed border-border rounded-2xl">
+                    <PackageOpen className="h-10 w-10 opacity-20" />
+                    <p className="text-sm font-barlow italic">Nenhum serviço adicionado ainda.</p>
+                    <p className="text-xs font-barlow text-muted-foreground/60">Use o catálogo ou adicione um item avulso acima.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {items.map((it, idx) => {
+                      const venda = it.valor_unitario || 0;
+                      const custo = it.custo_unitario || 0;
+                      const qtd = it.quantidade || 1;
+                      const totalItem = venda * qtd;
+                      const margemItem = venda > 0 ? ((venda - custo) / venda) * 100 : 0;
+                      const margemCor = margemItem > 35
+                        ? "text-emerald-600"
+                        : margemItem > 20
+                          ? "text-orange-500"
+                          : "text-destructive";
+                      const barCor = margemItem > 35
+                        ? "bg-emerald-500"
+                        : margemItem > 20
+                          ? "bg-orange-400"
+                          : "bg-destructive";
+
+                      return (
+                        <div key={it.id || idx} className="border border-border rounded-xl bg-card overflow-hidden">
+                          {/* Cabeçalho do card */}
+                          <div className="flex items-center gap-3 px-4 pt-3 pb-2">
+                            <span className="text-[10px] font-bold text-muted-foreground font-oswald w-5 shrink-0">#{idx + 1}</span>
+                            <Input
+                              value={it.nome || ""}
+                              onChange={(e) => updateItem(idx, "nome", e.target.value)}
+                              placeholder="Nome do serviço..."
+                              className="flex-1 font-oswald font-bold uppercase text-sm h-9 border-0 border-b border-border/50 rounded-none px-0 focus-visible:ring-0 bg-transparent"
+                            />
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                              onClick={() => removeItem(idx)}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
                             </Button>
-                          </td>
-                        </tr>
-                      ))}
-                      {items.length === 0 && (
-                        <tr>
-                          <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground italic">Nenhum serviço adicionado. Comece adicionando itens do catálogo.</td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
+                          </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 px-4 py-6 bg-muted/10 rounded-2xl border border-border/50">
-                  <div className="space-y-1">
-                    <p className="text-[9px] uppercase tracking-[0.2em] text-muted-foreground font-bold">Custo Oculto</p>
-                    <p className="font-oswald text-xl font-bold text-destructive/80 italic">{formatCurrencyLabel(totalCusto)}</p>
+                          {/* Corpo do card */}
+                          <div className="px-4 pb-3 space-y-3">
+                            {/* Linha 1: Unidade + Quantidade */}
+                            <div className="flex items-center gap-3">
+                              <div className="space-y-1 w-40">
+                                <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground font-barlow">Unidade</p>
+                                <Select
+                                  value={it.unidade || "un"}
+                                  onValueChange={(v) => updateItem(idx, "unidade", v)}
+                                >
+                                  <SelectTrigger className="h-8 text-xs font-barlow">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {UNIDADES_COMUNS.map(u => (
+                                      <SelectItem key={u.value} value={u.value} className="text-xs font-barlow">
+                                        {u.label}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div className="space-y-1 w-28">
+                                <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground font-barlow">Quantidade</p>
+                                <Input
+                                  type="number"
+                                  min={0}
+                                  step="0.01"
+                                  value={it.quantidade ?? 1}
+                                  onChange={(e) => updateItem(idx, "quantidade", Number(e.target.value))}
+                                  className="h-8 text-center font-barlow"
+                                />
+                              </div>
+                              {/* Total do item em destaque */}
+                              <div className="ml-auto text-right space-y-0.5">
+                                <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground font-barlow">Total do Item</p>
+                                <p className="font-oswald font-bold text-lg text-foreground">{fmt(totalItem)}</p>
+                              </div>
+                            </div>
+
+                            {/* Linha 2: Custo + Venda */}
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="space-y-1">
+                                <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/60 font-barlow">Custo Unitário (interno)</p>
+                                <CurrencyInput
+                                  value={it.custo_unitario || 0}
+                                  onChange={(v) => updateItem(idx, "custo_unitario", v)}
+                                  className="h-8 text-right text-destructive/70 bg-destructive/5 border-destructive/20 text-xs"
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <p className="text-[9px] font-bold uppercase tracking-widest text-emerald-700 font-barlow">Preço de Venda (cliente)</p>
+                                <CurrencyInput
+                                  value={it.valor_unitario || 0}
+                                  onChange={(v) => updateItem(idx, "valor_unitario", v)}
+                                  className="h-8 text-right font-bold text-emerald-700 bg-emerald-500/5 border-emerald-500/30"
+                                />
+                              </div>
+                            </div>
+
+                            {/* P3: Barra de margem sempre visível para orientar o preenchimento do custo */}
+                            <div className="space-y-1 pt-1">
+                              <div className="flex items-center justify-between">
+                                <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground font-barlow">Margem deste item</p>
+                                {custo > 0 ? (
+                                  <p className={cn("text-[10px] font-bold font-oswald", margemCor)}>
+                                    {margemItem.toFixed(0)}%
+                                  </p>
+                                ) : (
+                                  <p className="text-[9px] text-muted-foreground/50 italic font-barlow">Preencha o custo para calcular</p>
+                                )}
+                              </div>
+                              <div className="h-1 w-full bg-muted rounded-full overflow-hidden">
+                                <div
+                                  className={cn("h-full rounded-full transition-all duration-300", custo > 0 ? barCor : "bg-muted-foreground/20")}
+                                  style={{ width: custo > 0 ? `${Math.min(Math.max(margemItem, 0), 100)}%` : "0%" }}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                  <div className="space-y-1">
-                    <p className="text-[9px] uppercase tracking-[0.2em] text-emerald-700 font-bold">Venda Sugerida</p>
-                    <p className="font-oswald text-xl font-bold text-emerald-600">{formatCurrencyLabel(totalVenda)}</p>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-[9px] uppercase tracking-[0.2em] text-primary font-bold">Lucro Final</p>
-                    <p className="font-oswald text-xl font-bold text-primary">{formatCurrencyLabel(lucro)}</p>
-                  </div>
-                  <div className="flex flex-col justify-center items-center bg-white dark:bg-zinc-900 rounded-xl shadow-sm border border-border/50 p-2">
-                    <p className="text-[9px] uppercase tracking-[0.2em] text-muted-foreground font-bold mb-1">Saúde do Preço</p>
-                    <div className="flex items-center gap-2">
-                       <span className={cn("h-2 w-2 rounded-full", margemPercentual > 35 ? "bg-emerald-500 animate-pulse" : margemPercentual > 20 ? "bg-orange-500" : "bg-destructive")} />
-                       <p className={cn("font-oswald text-xl font-bold", margemPercentual > 35 ? "text-emerald-500" : margemPercentual > 20 ? "text-orange-500" : "text-destructive")}>
-                         {margemPercentual.toFixed(0)}%
-                       </p>
+                )}
+
+                {/* Totais consolidados */}
+                {items.length > 0 && (
+                  <div className="grid grid-cols-3 gap-3 px-4 py-4 bg-muted/20 rounded-2xl border border-border/50 mt-2">
+                    <div className="space-y-0.5 text-center">
+                      <p className="text-[9px] uppercase tracking-[0.2em] text-muted-foreground font-bold font-barlow">Custo Total</p>
+                      <p className="font-oswald text-lg font-bold text-destructive/70">{fmt(totalCusto)}</p>
+                    </div>
+                    <div className="space-y-0.5 text-center border-x border-border/50">
+                      <p className="text-[9px] uppercase tracking-[0.2em] text-emerald-700 font-bold font-barlow">Total de Venda</p>
+                      <p className="font-oswald text-lg font-bold text-emerald-600">{fmt(totalVenda)}</p>
+                    </div>
+                    <div className="space-y-0.5 text-center">
+                      <p className="text-[9px] uppercase tracking-[0.2em] text-primary font-bold font-barlow">
+                        Lucro · <span className={cn(margemPercentual > 35 ? "text-emerald-600" : margemPercentual > 20 ? "text-orange-500" : "text-destructive")}>
+                          {margemPercentual.toFixed(0)}%
+                        </span>
+                      </p>
+                      <p className="font-oswald text-lg font-bold text-primary">{fmt(lucro)}</p>
                     </div>
                   </div>
-                </div>
-
-                <div className="flex justify-center gap-2 pt-2">
-                  <Button variant="outline" size="sm" onClick={() => applyAutomaticMargin(30)} className="h-7 text-[9px] font-bold uppercase tracking-widest hover:border-emerald-500 hover:text-emerald-500 transition-colors">🔥 Margem 30%</Button>
-                  <Button variant="outline" size="sm" onClick={() => applyAutomaticMargin(50)} className="h-7 text-[9px] font-bold uppercase tracking-widest hover:border-emerald-500 hover:text-emerald-500 transition-colors">🚀 Margem 50%</Button>
-                  <Button variant="outline" size="sm" onClick={() => applyAutomaticMargin(100)} className="h-7 text-[9px] font-bold uppercase tracking-widest hover:border-emerald-500 hover:text-emerald-500 transition-colors">💎 Margem 100%</Button>
-                </div>
-
+                )}
               </TabsContent>
 
+              {/* ── PASSO 3: Prazos e Pagamento ── */}
               <TabsContent value="prazos" className="m-0 space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
                 <div className="pb-4 border-b border-border/50">
                   <h2 className="text-xl font-bold font-oswald uppercase text-primary flex items-center gap-2">
@@ -515,63 +756,98 @@ export function OrcamentoModal({ open, onClose, orcamento, initialClienteId }: P
                   </h2>
                   <p className="text-sm text-muted-foreground font-barlow italic">Defina as datas e a forma de pagamento. Clareza aqui evita problemas no futuro.</p>
                 </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="space-y-1.5 flex flex-col justify-end">
+                  {/* Emissão */}
+                  <div className="space-y-1.5">
                     <Label className="uppercase text-[10px] font-bold tracking-widest text-muted-foreground">Emissão da Proposta</Label>
                     <Popover>
                       <PopoverTrigger asChild>
-                        <Button type="button" variant="outline" className="w-full justify-start text-left font-normal h-10 border-input font-barlow">
+                        <Button type="button" variant="outline" className="w-full justify-start text-left font-normal h-10 font-barlow">
                           <CalendarIcon className="mr-2 h-4 w-4" />
                           {format(form.data_emissao, "dd/MM/yyyy", { locale: ptBR })}
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar mode="single" selected={form.data_emissao} onSelect={(d) => d && setForm({ ...form, data_emissao: d })} initialFocus className="p-3 pointer-events-auto" />
+                        <Calendar mode="single" selected={form.data_emissao} onSelect={(d) => d && setForm(prev => ({ ...prev, data_emissao: d }))} initialFocus className="p-3 pointer-events-auto" />
                       </PopoverContent>
                     </Popover>
                   </div>
-                  <div className="space-y-1.5 flex flex-col justify-end">
+
+                  {/* Validade com atalhos */}
+                  <div className="space-y-1.5">
                     <Label className="uppercase text-[10px] font-bold tracking-widest text-muted-foreground">Proposta Válida Até</Label>
                     <Popover>
                       <PopoverTrigger asChild>
-                        <Button type="button" variant="outline" className={cn("w-full justify-start text-left font-normal h-10", !form.validade && "text-muted-foreground", "font-barlow")}>
+                        <Button type="button" variant="outline" className={cn("w-full justify-start text-left font-normal h-10 font-barlow", !form.validade && "text-muted-foreground")}>
                           <CalendarIcon className="mr-2 h-4 w-4" />
                           {form.validade ? format(form.validade, "dd/MM/yyyy", { locale: ptBR }) : "Selecionar..."}
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar mode="single" selected={form.validade ?? undefined} onSelect={(d) => setForm({ ...form, validade: d ?? null })} initialFocus className="p-3 pointer-events-auto" />
+                        <Calendar mode="single" selected={form.validade ?? undefined} onSelect={(d) => setForm(prev => ({ ...prev, validade: d ?? null }))} initialFocus className="p-3 pointer-events-auto" />
                       </PopoverContent>
                     </Popover>
+                    {/* Atalhos de validade */}
+                    <div className="flex gap-1.5">
+                      {[7, 15, 30].map(dias => (
+                        <Button
+                          key={dias}
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-6 flex-1 text-[10px] font-bold font-oswald"
+                          onClick={() => setForm(prev => ({ ...prev, validade: addDays(new Date(), dias) }))}
+                        >
+                          +{dias}d
+                        </Button>
+                      ))}
+                    </div>
                   </div>
-                  <div className="space-y-1.5 flex flex-col justify-end">
+
+                  {/* Previsão de início */}
+                  <div className="space-y-1.5">
                     <Label className="uppercase text-[10px] font-bold tracking-widest text-muted-foreground">Previsão Inicial Obra</Label>
                     <Popover>
                       <PopoverTrigger asChild>
-                        <Button type="button" variant="outline" className={cn("w-full justify-start text-left font-normal h-10", !form.data_prevista_inicio && "text-muted-foreground", "font-barlow")}>
+                        <Button type="button" variant="outline" className={cn("w-full justify-start text-left font-normal h-10 font-barlow", !form.data_prevista_inicio && "text-muted-foreground")}>
                           <CalendarIcon className="mr-2 h-4 w-4" />
                           {form.data_prevista_inicio ? format(form.data_prevista_inicio, "dd/MM/yyyy", { locale: ptBR }) : "Opcional..."}
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar mode="single" selected={form.data_prevista_inicio ?? undefined} onSelect={(d) => setForm({ ...form, data_prevista_inicio: d ?? null })} initialFocus className="p-3 pointer-events-auto" />
+                        <Calendar mode="single" selected={form.data_prevista_inicio ?? undefined} onSelect={(d) => setForm(prev => ({ ...prev, data_prevista_inicio: d ?? null }))} initialFocus className="p-3 pointer-events-auto" />
                       </PopoverContent>
                     </Popover>
                   </div>
                 </div>
 
+                {/* Condições — Textarea para texto longo */}
                 <div className="space-y-4 pt-4 border-t border-border">
                   <div className="space-y-1.5">
                     <Label className="uppercase text-[10px] font-bold tracking-widest text-muted-foreground">Condições de Pagamento</Label>
-                    <Input value={form.condicoes_pagamento} onChange={(e) => setForm({ ...form, condicoes_pagamento: e.target.value })} placeholder="Ex: 50% de entrada na assinatura do contrato e 50% na conclusão." className="font-barlow" />
+                    <Textarea
+                      value={form.condicoes_pagamento}
+                      onChange={(e) => setForm(prev => ({ ...prev, condicoes_pagamento: e.target.value }))}
+                      placeholder="Ex: 50% de entrada na assinatura do contrato e 50% na conclusão."
+                      rows={2}
+                      className="font-barlow"
+                    />
                   </div>
                   <div className="space-y-1.5">
                     <Label className="uppercase text-[10px] font-bold tracking-widest text-muted-foreground">Prazo de Execução (Cláusula)</Label>
-                    <Input value={form.prazo_execucao} onChange={(e) => setForm({ ...form, prazo_execucao: e.target.value })} placeholder="Ex: Aprox. 20 dias úteis, condicionados as condições do tempo e materialização." className="font-barlow" />
+                    <Textarea
+                      value={form.prazo_execucao}
+                      onChange={(e) => setForm(prev => ({ ...prev, prazo_execucao: e.target.value }))}
+                      placeholder="Ex: Aprox. 20 dias úteis, condicionados às condições do tempo e materialização."
+                      rows={2}
+                      className="font-barlow"
+                    />
                   </div>
                 </div>
               </TabsContent>
 
+              {/* ── PASSO 4: Cláusulas ── */}
               <TabsContent value="clausulas" className="m-0 space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
                 <div className="pb-4 border-b border-border/50">
                   <h2 className="text-xl font-bold font-oswald uppercase text-primary flex items-center gap-2">
@@ -579,53 +855,218 @@ export function OrcamentoModal({ open, onClose, orcamento, initialClienteId }: P
                   </h2>
                   <p className="text-sm text-muted-foreground font-barlow italic">O que NÃO está incluso e quais as responsabilidades do cliente.</p>
                 </div>
+
                 <div className="space-y-1.5">
                   <Label className="uppercase text-[10px] font-bold tracking-widest text-muted-foreground flex items-center gap-1.5">
                     O que NÃO está incluso (Exclusões)
-                    <TooltipProvider><Tooltip><TooltipTrigger asChild><Info className="h-3 w-3 cursor-help text-muted-foreground/50" /></TooltipTrigger><TooltipContent className="text-xs">Crucial para evitar que o cliente cobre coisas que não foram combinadas.</TooltipContent></Tooltip></TooltipProvider>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild><Info className="h-3 w-3 cursor-help text-muted-foreground/50" /></TooltipTrigger>
+                        <TooltipContent className="text-xs">Crucial para evitar que o cliente cobre coisas que não foram combinadas.</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </Label>
-                  <Textarea value={form.exclusoes} onChange={(e) => setForm({ ...form, exclusoes: e.target.value })} placeholder="Liste o que o orçamento NÃO cobre (ex: fornecimento de porcelanato, caçamba de entulho...)." rows={3} className="font-barlow" />
+                  <Textarea
+                    value={form.exclusoes}
+                    onChange={(e) => setForm(prev => ({ ...prev, exclusoes: e.target.value }))}
+                    placeholder="Liste o que o orçamento NÃO cobre (ex: fornecimento de porcelanato, caçamba de entulho...)."
+                    rows={3}
+                    className="font-barlow"
+                  />
                   <p className="text-[10px] text-muted-foreground pt-1">É importantíssimo proteger a PratesPaiva contra expectativas irreais do cliente.</p>
                 </div>
-                
+
                 <div className="space-y-1.5 pt-2">
                   <Label className="uppercase text-[10px] font-bold tracking-widest text-muted-foreground">Responsabilidade do Contratante</Label>
-                  <Textarea value={form.responsabilidades} onChange={(e) => setForm({ ...form, responsabilidades: e.target.value })} placeholder="O que o cliente precisa fazer (ex: retirar itens pessoais do local, fornecer material básico, etc)." rows={3} className="font-barlow" />
+                  <Textarea
+                    value={form.responsabilidades}
+                    onChange={(e) => setForm(prev => ({ ...prev, responsabilidades: e.target.value }))}
+                    placeholder="O que o cliente precisa fazer (ex: retirar itens pessoais do local, fornecer material básico, etc)."
+                    rows={3}
+                    className="font-barlow"
+                  />
                 </div>
 
                 <div className="space-y-1.5 pt-2">
-                  <Label className="uppercase text-[10px] font-bold tracking-widest text-muted-foreground">Notas Internas Diárias (Apenas para nós)</Label>
-                  <Textarea value={form.observacoes} onChange={(e) => setForm({ ...form, observacoes: e.target.value })} placeholder="Comentários internos confidenciais... (não aparece no PDF do cliente)" rows={3} className="font-barlow bg-orange-50 border-orange-200 dark:bg-orange-950/20 dark:border-orange-900/40" />
+                  <Label className="uppercase text-[10px] font-bold tracking-widest text-muted-foreground">Notas Internas (Apenas para nós)</Label>
+                  <Textarea
+                    value={form.observacoes}
+                    onChange={(e) => setForm(prev => ({ ...prev, observacoes: e.target.value }))}
+                    placeholder="Comentários internos confidenciais... (não aparece no PDF do cliente)"
+                    rows={3}
+                    className="font-barlow bg-orange-50 border-orange-200 dark:bg-orange-950/20 dark:border-orange-900/40"
+                  />
                 </div>
               </TabsContent>
+
+              {/* ── PASSO 5: Revisão Final ── */}
+              <TabsContent value="revisao" className="m-0 space-y-5 animate-in fade-in slide-in-from-right-4 duration-300">
+                <div className="pb-4 border-b border-border/50">
+                  <h2 className="text-xl font-bold font-oswald uppercase text-primary flex items-center gap-2">
+                    <Save className="h-5 w-5" /> 5. Revisão Final: Tudo Certo?
+                  </h2>
+                  <p className="text-sm text-muted-foreground font-barlow italic">Confira e ajuste qualquer detalhe antes de gerar a proposta.</p>
+                </div>
+
+                {/* Bloco 1: Identidade */}
+                <ReviewBlock title="1. Identidade e Local" onEdit={() => setActiveTab("dados")} icon={<User className="h-3 w-3" />}>
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-2">
+                    <ReviewRow label="Título" value={form.titulo || "—"} highlight />
+                    <ReviewRow label="Endereço da Obra" value={form.endereco_obra || "—"} />
+                    {form.clienteId && <ReviewRow label="Cliente" value={clientes.find(c => c.id === form.clienteId)?.nome ?? "—"} />}
+                    {form.condominioId && <ReviewRow label="Condomínio" value={condominios.find(c => c.id === form.condominioId)?.nome ?? "—"} />}
+                    {form.descricao && <ReviewRow label="Descrição" value={form.descricao} wrap className="col-span-2" />}
+                  </div>
+                </ReviewBlock>
+
+                {/* Bloco 2: Serviços */}
+                <ReviewBlock title={`2. Serviços (${items.length} ${items.length === 1 ? "item" : "itens"})`} onEdit={() => setActiveTab("servicos")} icon={<CheckCircle2 className="h-3 w-3" />}>
+                  {items.length === 0 ? (
+                    <p className="text-xs text-muted-foreground italic font-barlow">Nenhum serviço adicionado.</p>
+                  ) : (
+                    <div className="space-y-1">
+                      {items.map((it, i) => (
+                        <div key={it.id || i} className="flex items-center justify-between text-xs font-barlow py-0.5">
+                          <span className="font-medium truncate max-w-[60%]">{it.nome || "—"}</span>
+                          <span className="text-muted-foreground shrink-0">
+                            {it.quantidade} {it.unidade} · <span className="font-bold text-foreground">{fmt((it.valor_unitario || 0) * (it.quantidade || 1))}</span>
+                          </span>
+                        </div>
+                      ))}
+                      <div className="flex justify-between items-center pt-2 border-t border-border/50 mt-1">
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground font-barlow">Total</span>
+                        <span className="font-oswald font-bold text-base text-primary">{fmt(totalVenda)}</span>
+                      </div>
+                    </div>
+                  )}
+                </ReviewBlock>
+
+                {/* Bloco 3: Prazos */}
+                <ReviewBlock title="3. Prazos e Pagamento" onEdit={() => setActiveTab("prazos")} icon={<ArrowRight className="h-3 w-3" />}>
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-2">
+                    <ReviewRow label="Emissão" value={format(form.data_emissao, "dd/MM/yyyy", { locale: ptBR })} />
+                    <ReviewRow label="Validade" value={form.validade ? format(form.validade, "dd/MM/yyyy", { locale: ptBR }) : "—"} />
+                    <ReviewRow label="Previsão de Início" value={form.data_prevista_inicio ? format(form.data_prevista_inicio, "dd/MM/yyyy", { locale: ptBR }) : "—"} />
+                    <ReviewRow label="Pagamento" value={form.condicoes_pagamento || "—"} wrap />
+                    <ReviewRow label="Prazo de Execução" value={form.prazo_execucao || "—"} wrap />
+                  </div>
+                </ReviewBlock>
+
+                {/* Bloco 4: Blindagem */}
+                <ReviewBlock title="4. Blindagem" onEdit={() => setActiveTab("clausulas")} icon={<Tag className="h-3 w-3" />}>
+                  <div className="space-y-2">
+                    <ReviewRow label="Exclusões" value={form.exclusoes || "—"} wrap />
+                    <ReviewRow label="Responsabilidades" value={form.responsabilidades || "—"} wrap />
+                    {form.observacoes && <ReviewRow label="Notas Internas" value={form.observacoes} wrap />}
+                  </div>
+                </ReviewBlock>
+
+                {/* Status — movido para revisão */}
+                <div className="bg-muted/30 rounded-xl border border-border p-4">
+                  <Label className="uppercase text-[10px] font-bold tracking-widest text-muted-foreground block mb-2">Status da Proposta</Label>
+                  <Select value={form.status} onValueChange={(v) => setForm(prev => ({ ...prev, status: v as StatusOrcamento }))}>
+                    <SelectTrigger className="font-oswald uppercase"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {statusOptions.map((s) => (
+                        <SelectItem key={s.value} value={s.value} className="font-oswald uppercase">{s.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Saúde do preço */}
+                {items.length > 0 && (
+                  <div className={cn(
+                    "flex items-center justify-between px-4 py-3 rounded-xl border font-barlow",
+                    margemPercentual > 35 ? "bg-emerald-50 border-emerald-200 dark:bg-emerald-950/20" :
+                    margemPercentual > 20 ? "bg-orange-50 border-orange-200 dark:bg-orange-950/20" :
+                    "bg-destructive/5 border-destructive/20"
+                  )}>
+                    <span className="text-xs font-bold uppercase tracking-wide">Saúde do Preço</span>
+                    <span className={cn("font-oswald font-bold text-lg",
+                      margemPercentual > 35 ? "text-emerald-600" :
+                      margemPercentual > 20 ? "text-orange-500" : "text-destructive"
+                    )}>
+                      Margem {margemPercentual.toFixed(0)}% · {fmt(lucro)} de lucro
+                    </span>
+                  </div>
+                )}
+
+                {/* Detalhes Operacionais (Resumo) */}
+                {items.length > 0 && (
+                  <div className="mt-4 bg-muted/30 rounded-xl p-5 border border-border space-y-4">
+                    <h3 className="font-oswald uppercase text-[10px] font-bold text-muted-foreground tracking-widest border-b border-border/50 pb-2 flex items-center gap-2">
+                      <Users className="h-3 w-3" /> Planejamento Operacional Sugerido
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground font-barlow">Equipes Necessárias</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {Array.from(new Set(items.map(it => {
+                            const s = catalogoServicos.find(cs => cs.id === it.servico_id);
+                            return s?.equipe_necessaria;
+                          }).filter(Boolean))).length > 0 ? (
+                            Array.from(new Set(items.map(it => {
+                              const s = catalogoServicos.find(cs => cs.id === it.servico_id);
+                              return s?.equipe_necessaria;
+                            }).filter(Boolean))).map((eq, i) => (
+                              <Badge key={i} variant="secondary" className="font-barlow text-[10px] py-0.5 px-2 bg-card border-border italic">
+                                {eq}
+                              </Badge>
+                            ))
+                          ) : (
+                            <span className="text-[10px] text-muted-foreground italic font-barlow">A definir pelo Mestre Carlos</span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground font-barlow">Tempos Estimados</p>
+                        <div className="space-y-1">
+                          {items.filter(it => {
+                            const s = catalogoServicos.find(cs => cs.id === it.servico_id);
+                            return !!s?.tempo_medio;
+                          }).length > 0 ? (
+                            items.map((it, i) => {
+                              const s = catalogoServicos.find(cs => cs.id === it.servico_id);
+                              if (!s?.tempo_medio) return null;
+                              return (
+                                <div key={i} className="flex justify-between items-center text-[10px] font-barlow border-b border-border/10 pb-1">
+                                  <span className="text-muted-foreground truncate max-w-[140px]">{it.nome}</span>
+                                  <span className="font-bold text-foreground bg-primary/5 px-1.5 rounded">{s.tempo_medio}</span>
+                                </div>
+                              );
+                            })
+                          ) : (
+                            <p className="text-[10px] text-muted-foreground italic font-barlow">Cálculo manual no cronograma.</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </TabsContent>
+
             </div>
 
+            {/* Rodapé de navegação */}
             <div className="p-6 border-t border-border bg-muted/20 shrink-0 flex items-center justify-between">
-              <div className="flex gap-3">
+              <div>
                 {activeTab !== "dados" ? (
-                   <Button type="button" variant="outline" className="font-oswald font-bold uppercase tracking-widest h-11 px-6 shadow-sm flex items-center gap-2" onClick={() => {
-                     if (activeTab === "servicos") setActiveTab("dados");
-                     if (activeTab === "prazos") setActiveTab("servicos");
-                     if (activeTab === "clausulas") setActiveTab("prazos");
-                   }}>
-                     <ChevronLeft className="h-4 w-4" /> Anterior
-                   </Button>
+                  <Button type="button" variant="outline" className="font-oswald font-bold uppercase tracking-widest h-11 px-6 shadow-sm flex items-center gap-2" onClick={goPrev}>
+                    <ChevronLeft className="h-4 w-4" /> Anterior
+                  </Button>
                 ) : (
                   <Button type="button" variant="ghost" onClick={onClose} disabled={isSaving}>Cancelar</Button>
                 )}
               </div>
 
-              <div className="flex gap-3">
-                {activeTab !== "clausulas" ? (
-                   <Button type="button" variant="default" className="font-oswald font-bold uppercase tracking-widest h-11 px-6 shadow-md flex items-center gap-2 bg-primary text-primary-foreground hover:opacity-90" onClick={() => {
-                     if (activeTab === "dados") setActiveTab("servicos");
-                     if (activeTab === "servicos") setActiveTab("prazos");
-                     if (activeTab === "prazos") setActiveTab("clausulas");
-                   }}>
-                     Próxima Etapa <ChevronRight className="h-4 w-4" />
-                   </Button>
+              <div>
+                {activeTab !== "revisao" ? (
+                  <Button type="button" variant="default" className="font-oswald font-bold uppercase tracking-widest h-11 px-6 shadow-md flex items-center gap-2 bg-primary text-primary-foreground hover:opacity-90" onClick={goNext}>
+                    Próxima Etapa <ChevronRight className="h-4 w-4" />
+                  </Button>
                 ) : (
-                  <Button type="submit" onClick={handleSubmit} disabled={isSaving} className="font-oswald font-bold uppercase tracking-widest h-11 px-6 bg-emerald-600 text-white hover:bg-emerald-700 shadow-md flex items-center gap-2 scale-105 active:scale-100 transition-all">
+                  <Button type="button" onClick={handleSubmit} disabled={isSaving} className="font-oswald font-bold uppercase tracking-widest h-11 px-6 bg-emerald-600 text-white hover:bg-emerald-700 shadow-md flex items-center gap-2 scale-105 active:scale-100 transition-all">
                     <Save className="h-4 w-4" /> {isEdit ? "Salvar Proposta" : "Gerar Proposta Ouro"}
                   </Button>
                 )}
@@ -635,8 +1076,60 @@ export function OrcamentoModal({ open, onClose, orcamento, initialClienteId }: P
 
         </div>
       </DialogContent>
-      {/* Modal para Adicionar Cliente Rápidamente */}
+
       <ContatoModal open={newClientModalOpen} onClose={() => setNewClientModalOpen(false)} />
+      <CondominioModal open={newCondominioModalOpen} onClose={() => setNewCondominioModalOpen(false)} />
     </Dialog>
+  );
+}
+
+// ─── Componentes auxiliares ────────────────────────────────────────────────
+
+function ReviewBlock({
+  title, onEdit, icon, children,
+}: {
+  title: string;
+  onEdit: () => void;
+  icon: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-xl border border-border bg-muted/20 overflow-hidden">
+      <button
+        type="button"
+        onClick={onEdit}
+        className="w-full flex items-center justify-between px-4 py-2.5 bg-muted/40 hover:bg-muted/60 transition-colors"
+      >
+        <span className="text-[10px] font-bold font-oswald uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+          {icon} {title}
+        </span>
+        <span className="text-[10px] text-primary font-barlow underline">editar</span>
+      </button>
+      <div className="px-4 py-3">{children}</div>
+    </div>
+  );
+}
+
+function ReviewRow({
+  label, value, highlight, wrap, className,
+}: {
+  label: string;
+  value: string;
+  highlight?: boolean;
+  wrap?: boolean;
+  className?: string;
+}) {
+  return (
+    <div className={cn("space-y-0.5", className)}>
+      <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground font-barlow">{label}</p>
+      <p className={cn(
+        "text-sm font-barlow",
+        wrap ? "line-clamp-2" : "truncate",
+        highlight ? "font-bold text-foreground" : "text-muted-foreground",
+        !value || value === "—" ? "italic opacity-50" : "",
+      )}>
+        {value || "—"}
+      </p>
+    </div>
   );
 }

@@ -2,7 +2,9 @@ export type TipoContato = "sindico" | "pessoa_fisica" | "empresa" | "administrad
 export type StatusPagamento = "pago" | "nao_pago";
 export type StatusOrcamento = "rascunho" | "enviado" | "aprovado" | "recusado" | "vencido" | "convertido";
 export type StatusObra = "aguardando" | "em_andamento" | "concluido" | "cancelado";
-export type TipoFuncionario = "proprio" | "terceirizado" | "parceiro";
+export type TipoFuncionario = "proprio" | "terceirizado";
+export type TipoServico = "preventivo" | "corretivo" | "emergencial";
+export type NivelDificuldade = "facil" | "medio" | "dificil";
 
 export interface Cliente {
   id: string;
@@ -100,7 +102,33 @@ export interface CatalogoServico {
   unidade_padrao: string;
   valor_base_sugerido: number;
   custo_padrao: number;
+  // Custo granular
+  custo_material: number;
+  custo_mao_obra: number;
+  custo_deslocamento: number;
+  custo_extras: number;
+  margem_desejada: number;
+  // Classificação
   prestador_padrao_id: string | null;
+  categoria: string | null;
+  subcategoria: string | null;
+  // Metadados operacionais
+  tipo_servico: TipoServico | null;
+  dificuldade: NivelDificuldade | null;
+  tempo_medio: string | null;
+  equipe_necessaria: string | null;
+  criado_em: string;
+}
+
+export interface PontoDiario {
+  id: string;
+  funcionario_id: string;
+  trabalho_id: string | null;
+  data: string;           // "YYYY-MM-DD"
+  tipo_dia: "completo" | "meio";
+  valor_diaria: number;
+  custo_total: number;
+  observacoes: string;
   criado_em: string;
 }
 

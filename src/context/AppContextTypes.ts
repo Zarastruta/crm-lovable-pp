@@ -1,10 +1,10 @@
 import { createContext, useContext } from "react";
 import { User } from "@supabase/supabase-js";
 import { ExtendedDatabase } from "@/integrations/supabase/extended-types";
-import { 
+import {
   Cliente, Condominio, Trabalho, Orcamento, Funcionario, Ferramenta,
   TipoContato, StatusPagamento, StatusOrcamento, StatusObra, TipoFuncionario,
-  CatalogoServico, OrcamentoItem
+  CatalogoServico, OrcamentoItem, PontoDiario
 } from "@/types";
 
 export type ClienteRow = ExtendedDatabase["public"]["Tables"]["clientes"]["Row"];
@@ -15,6 +15,7 @@ export type FuncionarioRow = ExtendedDatabase["public"]["Tables"]["funcionarios"
 export type FerramentaRow = ExtendedDatabase["public"]["Tables"]["ferramentas"]["Row"];
 export type CatalogoServicoRow = ExtendedDatabase["public"]["Tables"]["catalogo_servicos"]["Row"];
 export type OrcamentoItemRow = ExtendedDatabase["public"]["Tables"]["orcamento_itens"]["Row"];
+export type PontoDiarioRow = ExtendedDatabase["public"]["Tables"]["ponto_diario"]["Row"];
 
 export function mapCliente(row: ClienteRow): Cliente {
   return {
@@ -124,7 +125,36 @@ export function mapCatalogoServico(row: CatalogoServicoRow): CatalogoServico {
     unidade_padrao: row.unidade_padrao,
     valor_base_sugerido: Number(row.valor_base_sugerido),
     custo_padrao: Number(row.custo_padrao),
+    // Custo granular (com fallback seguro)
+    custo_material:     Number((row as any).custo_material ?? 0),
+    custo_mao_obra:     Number((row as any).custo_mao_obra ?? 0),
+    custo_deslocamento: Number((row as any).custo_deslocamento ?? 0),
+    custo_extras:       Number((row as any).custo_extras ?? 0),
+    margem_desejada:    Number((row as any).margem_desejada ?? 35),
+    // Classificação
     prestador_padrao_id: row.prestador_padrao_id,
+    categoria:    row.categoria ?? null,
+    subcategoria: row.subcategoria ?? null,
+    // Metadados operacionais
+    tipo_servico:      ((row as any).tipo_servico ?? null) as CatalogoServico["tipo_servico"],
+    dificuldade:       ((row as any).dificuldade ?? null) as CatalogoServico["dificuldade"],
+    tempo_medio:       (row as any).tempo_medio ?? null,
+    equipe_necessaria: (row as any).equipe_necessaria ?? null,
+    criado_em: row.criado_em,
+  };
+}
+
+
+export function mapPontoDiario(row: PontoDiarioRow): PontoDiario {
+  return {
+    id: row.id,
+    funcionario_id: row.funcionario_id,
+    trabalho_id: row.trabalho_id,
+    data: row.data,
+    tipo_dia: (row.tipo_dia === "meio" ? "meio" : "completo"),
+    valor_diaria: Number(row.valor_diaria),
+    custo_total: Number(row.custo_total),
+    observacoes: row.observacoes ?? "",
     criado_em: row.criado_em,
   };
 }
@@ -197,6 +227,12 @@ export interface AppContextType {
   updateCatalogoServico: (id: string, s: Partial<CatalogoServico>) => Promise<boolean>;
   deleteCatalogoServico: (id: string) => Promise<boolean>;
   refreshCatalogoServicos: () => Promise<void>;
+
+  pontoDiario: PontoDiario[];
+  addPontoDiario: (p: Omit<PontoDiario, "id" | "criado_em">) => Promise<string | false>;
+  updatePontoDiario: (id: string, p: Partial<PontoDiario>) => Promise<boolean>;
+  deletePontoDiario: (id: string) => Promise<boolean>;
+  refreshPontoDiario: () => Promise<void>;
 }
 
 export const AppContext = createContext<AppContextType | null>(null);

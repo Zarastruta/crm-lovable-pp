@@ -75,6 +75,34 @@ export default function Orcamentos() {
         </Button>
       </div>
 
+      {/* M4: KPIs */}
+      {!dataLoading && orcamentos.length > 0 && (() => {
+        const aprovados  = orcamentos.filter(o => o.status === "aprovado");
+        const enviados   = orcamentos.filter(o => o.status === "enviado");
+        const abertos    = [...aprovados, ...enviados];
+        const valorAberto = abertos.reduce((s, o) => s + o.valor, 0);
+        const valorAprovado = aprovados.reduce((s, o) => s + o.valor, 0);
+        return (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="bg-card border border-border rounded-xl px-4 py-3">
+              <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Total</p>
+              <p className="text-xl font-bold font-oswald">{orcamentos.length}</p>
+            </div>
+            <div className="bg-card border border-border rounded-xl px-4 py-3">
+              <p className="text-[9px] font-bold uppercase tracking-widest text-orange-500">Aguardando</p>
+              <p className="text-xl font-bold font-oswald text-orange-500">{enviados.length}</p>
+            </div>
+            <div className="bg-card border border-emerald-200 dark:border-emerald-900/50 rounded-xl px-4 py-3">
+              <p className="text-[9px] font-bold uppercase tracking-widest text-emerald-600">Aprovados</p>
+              <p className="text-xl font-bold font-oswald text-emerald-600">{formatCurrency(valorAprovado)}</p>
+            </div>
+            <div className="bg-card border border-primary/20 rounded-xl px-4 py-3">
+              <p className="text-[9px] font-bold uppercase tracking-widest text-primary">Em Aberto</p>
+              <p className="text-xl font-bold font-oswald text-primary">{formatCurrency(valorAberto)}</p>
+            </div>
+          </div>
+        );
+      })()}
       <div className="flex flex-col sm:flex-row gap-2 flex-wrap">
         <div className="relative flex-1 min-w-48">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
