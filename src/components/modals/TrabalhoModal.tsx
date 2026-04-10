@@ -122,8 +122,12 @@ export function TrabalhoModal({ open, onClose, trabalho, defaultCondominioId }: 
     if (!allowedTypes.includes(file.type)) { toast.error("Formato não suportado."); return; }
     if (file.size > 10 * 1024 * 1024) { toast.error("Arquivo muito grande."); return; }
     setUploading(true);
-    const ext = file.name.split(".").pop();
-    const path = `nf-${Date.now()}.${ext}`;
+    const MIME_TO_EXT: Record<string, string> = {
+      "image/jpeg": "jpg", "image/png": "png",
+      "image/webp": "webp", "application/pdf": "pdf",
+    };
+    const ext = MIME_TO_EXT[file.type] ?? "bin";
+    const path = `nf-${crypto.randomUUID()}.${ext}`;
     const { error } = await supabase.storage.from("notas-fiscais").upload(path, file);
     if (error) { toast.error("Erro ao enviar: " + error.message); setUploading(false); return; }
     setNfFotoPath(path);

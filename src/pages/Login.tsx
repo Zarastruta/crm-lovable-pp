@@ -22,7 +22,7 @@ export default function Login() {
     const errMsg = await login(email, senha);
     setLoading(false);
     if (errMsg) {
-      setError(errMsg);
+      setError("E-mail ou senha inválidos.");
     } else {
       navigate("/");
     }

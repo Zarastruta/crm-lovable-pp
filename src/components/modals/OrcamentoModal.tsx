@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { supabase } from "@/integrations/supabase/client";
@@ -102,6 +103,7 @@ export function OrcamentoModal({ open, onClose, orcamento, initialClienteId }: P
   const [newClientModalOpen, setNewClientModalOpen] = useState(false);
   const [newCondominioModalOpen, setNewCondominioModalOpen] = useState(false);
   const [catalogoAberto, setCatalogoAberto] = useState(false);
+  const [catalogoSearch, setCatalogoSearch] = useState("");
 
   // ─── Cliente selecionado e tipo ───────────────────────────────────────────
   const clienteSelecionado = clientes.find(c => c.id === form.clienteId);
@@ -246,14 +248,6 @@ export function OrcamentoModal({ open, onClose, orcamento, initialClienteId }: P
   const lucro = totalVenda - totalCusto;
   const margemPercentual = totalVenda > 0 ? (lucro / totalVenda) * 100 : 0;
 
-  const applyAutomaticMargin = (percent: number) => {
-    setItems(prev => prev.map(it => ({
-      ...it,
-      valor_unitario: (it.custo_unitario || 0) * (1 + percent / 100),
-    })));
-    toast.success(`Margem de ${percent}% aplicada!`);
-  };
-
   // Auto-sync valor com itens (sempre, sem condicional)
   useEffect(() => {
     setForm(prev => ({ ...prev, valor: totalVenda }));
@@ -264,6 +258,12 @@ export function OrcamentoModal({ open, onClose, orcamento, initialClienteId }: P
     if (!form.titulo.trim()) {
       toast.error("O título da proposta é obrigatório.");
       setActiveTab("dados");
+      return;
+    }
+    const itensSemNome = items.filter(it => !it.nome?.trim());
+    if (itensSemNome.length > 0) {
+      toast.error(`${itensSemNome.length} item(s) sem nome. Preencha antes de salvar.`);
+      setActiveTab("servicos");
       return;
     }
     setIsSaving(true);
@@ -320,8 +320,8 @@ export function OrcamentoModal({ open, onClose, orcamento, initialClienteId }: P
           if (insError) throw new Error("Falha ao salvar itens: " + insError.message);
         }
       }
+      await refreshAll();
       onClose();
-      refreshAll();
     } catch (e) {
       toast.error("Erro ao salvar o orçamento");
       console.error(e);
@@ -349,33 +349,61 @@ export function OrcamentoModal({ open, onClose, orcamento, initialClienteId }: P
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent
         onInteractOutside={(e) => e.preventDefault()}
-        className="max-w-[900px] max-h-[90vh] overflow-y-auto w-full p-0 gap-0 bg-background rounded-2xl shadow-2xl"
+        className="max-w-[900px] w-full p-0 gap-0 bg-background shadow-2xl
+          h-dvh rounded-none
+          sm:h-auto sm:max-h-[90vh] sm:rounded-2xl"
       >
-        <div className="flex flex-col h-full max-h-[90vh]">
+        <div className="flex flex-col h-full sm:max-h-[90vh]">
 
           {/* Header */}
-          <DialogHeader className="px-6 py-4 border-b border-border bg-muted/20 shrink-0">
-            <DialogTitle className="text-2xl font-bold font-oswald uppercase tracking-tight">
-              {isEdit ? "Editar Orçamento (Padrão Ouro)" : "Novo Orçamento (Padrão Ouro)"}
-            </DialogTitle>
-            <p className="text-xs text-muted-foreground font-barlow tracking-widest uppercase">Gerador Inteligente e Cálculo de Margem</p>
-          </DialogHeader>
-
-          {/* Barra de progresso */}
-          <div className="px-6 py-3 border-b border-border bg-card shrink-0">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] font-bold font-oswald uppercase tracking-[0.2em] text-muted-foreground">
-                Passo {stepNumber} de 5
-              </span>
-              <span className="text-[10px] font-bold font-oswald uppercase tracking-[0.2em] text-primary">
-                {Math.round(stepNumber / 5 * 100)}% concluído
+          <DialogHeader className="px-4 sm:px-6 py-3 sm:py-4 border-b border-border bg-muted/20 shrink-0">
+            <div className="flex items-center justify-between">
+              <DialogTitle className="text-lg sm:text-2xl font-bold font-oswald uppercase tracking-tight leading-tight">
+                {isEdit ? "Editar Proposta" : "Nova Proposta"}
+              </DialogTitle>
+              <span className="text-xs font-bold font-oswald text-primary bg-primary/10 px-2 py-1 rounded-full">
+                {stepNumber}/5
               </span>
             </div>
-            <Progress value={stepNumber / 5 * 100} className="h-1.5 bg-muted" />
+          </DialogHeader>
+
+          {/* Indicador de passos clicável */}
+          <div className="px-4 sm:px-6 py-3 border-b border-border bg-card shrink-0">
+            <div className="flex items-center gap-1.5">
+              {TAB_ORDER.map((tab, idx) => {
+                const num = idx + 1;
+                const isActive = tab === activeTab;
+                const isDone = TAB_ORDER.indexOf(activeTab) > idx;
+                const labels = ["Dados", "Serviços", "Prazos", "Cláusulas", "Revisão"];
+                return (
+                  <button
+                    key={tab}
+                    type="button"
+                    onClick={() => setActiveTab(tab)}
+                    className={cn(
+                      "flex items-center gap-1.5 rounded-full px-2 sm:px-3 py-1.5 text-[10px] sm:text-xs font-bold font-oswald uppercase transition-all shrink-0",
+                      isActive
+                        ? "bg-primary text-primary-foreground shadow-sm"
+                        : isDone
+                          ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                          : "bg-muted text-muted-foreground"
+                    )}
+                  >
+                    <span className={cn(
+                      "h-4 w-4 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0",
+                      isActive ? "bg-white/20" : isDone ? "bg-emerald-500 text-white" : "bg-muted-foreground/20"
+                    )}>
+                      {isDone ? "✓" : num}
+                    </span>
+                    <span className="hidden sm:inline">{labels[idx]}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabKey)} className="flex-1 flex flex-col min-h-0">
-            <div className="flex-1 overflow-y-auto p-6 bg-card">
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-card">
 
               {/* ── PASSO 1: Identidade e Local ── */}
               <TabsContent value="dados" className="m-0 space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
@@ -401,7 +429,7 @@ export function OrcamentoModal({ open, onClose, orcamento, initialClienteId }: P
                       </Button>
                     </div>
                     <Select value={form.clienteId ?? "_none"} onValueChange={handleClienteChange}>
-                      <SelectTrigger className="h-10"><SelectValue placeholder="Selecionar Cliente..." /></SelectTrigger>
+                      <SelectTrigger className="h-12"><SelectValue placeholder="Selecionar Cliente..." /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="_none">Nenhum</SelectItem>
                         {clientes.map((c) => (
@@ -427,7 +455,7 @@ export function OrcamentoModal({ open, onClose, orcamento, initialClienteId }: P
                         </Button>
                       </div>
                       <Select value={form.condominioId ?? "_none"} onValueChange={handleCondominioChange}>
-                        <SelectTrigger className="h-10"><SelectValue placeholder="Selecionar Condomínio..." /></SelectTrigger>
+                        <SelectTrigger className="h-12"><SelectValue placeholder="Selecionar Condomínio..." /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="_none">Nenhum</SelectItem>
                           {condominios.map((c) => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}
@@ -441,7 +469,7 @@ export function OrcamentoModal({ open, onClose, orcamento, initialClienteId }: P
                     <div className="space-y-1.5 animate-in fade-in duration-200">
                       <Label className="text-xs font-barlow font-bold">Síndico Responsável</Label>
                       <Select value={form.sindicoId ?? "_none"} onValueChange={(v) => setForm(prev => ({ ...prev, sindicoId: v === "_none" ? null : v }))}>
-                        <SelectTrigger className="h-10"><SelectValue placeholder="Selecionar Síndico..." /></SelectTrigger>
+                        <SelectTrigger className="h-12"><SelectValue placeholder="Selecionar Síndico..." /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="_none">Nenhum</SelectItem>
                           {clientes.filter(c => c.tipo === "sindico").map(c => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}
@@ -474,7 +502,7 @@ export function OrcamentoModal({ open, onClose, orcamento, initialClienteId }: P
                       value={form.titulo}
                       onChange={(e) => setForm(prev => ({ ...prev, titulo: e.target.value }))}
                       placeholder="Ex: Reforma Cobertura Palmas"
-                      className="font-oswald text-lg"
+                      className="font-oswald text-lg h-12"
                     />
                   </div>
                   <div className="space-y-1.5">
@@ -486,7 +514,7 @@ export function OrcamentoModal({ open, onClose, orcamento, initialClienteId }: P
                       value={form.endereco_obra}
                       onChange={(e) => setForm(prev => ({ ...prev, endereco_obra: e.target.value }))}
                       placeholder="Endereço exato da obra..."
-                      className="font-barlow"
+                      className="font-barlow h-12"
                     />
                   </div>
                 </div>
@@ -518,22 +546,27 @@ export function OrcamentoModal({ open, onClose, orcamento, initialClienteId }: P
                 {/* Barra de adicionar */}
                 <div className="flex gap-2">
                   {/* Busca no catálogo */}
-                  <Popover open={catalogoAberto} onOpenChange={setCatalogoAberto}>
+                  <Popover open={catalogoAberto} onOpenChange={(v) => { setCatalogoAberto(v); if (!v) setCatalogoSearch(""); }}>
                     <PopoverTrigger asChild>
                       <Button
                         type="button"
                         variant="default"
-                        className="flex-1 justify-start gap-2 font-oswald uppercase font-bold text-xs h-10 bg-primary text-primary-foreground"
+                        className="flex-1 justify-start gap-2 font-oswald uppercase font-bold text-sm h-12 bg-primary text-primary-foreground"
                       >
-                        <Search className="h-3.5 w-3.5" />
+                        <Search className="h-4 w-4" />
                         {catalogoServicos.length > 0
-                          ? `Buscar no Catálogo (${catalogoServicos.length} itens)`
+                          ? `Catálogo (${catalogoServicos.length})`
                           : "Catálogo vazio"}
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-[420px] p-0" align="start" side="bottom">
+                    <PopoverContent className="w-[calc(100vw-2rem)] sm:w-[420px] p-0" align="start" side="bottom">
                       <Command>
-                        <CommandInput placeholder="Buscar serviço por nome ou categoria..." className="font-barlow" />
+                        <CommandInput
+                          placeholder="Buscar serviço por nome ou categoria..."
+                          className="font-barlow"
+                          value={catalogoSearch}
+                          onValueChange={setCatalogoSearch}
+                        />
                         <CommandList>
                           <CommandEmpty className="py-6 text-center text-sm text-muted-foreground font-barlow">
                             Nenhum serviço encontrado.
@@ -555,6 +588,7 @@ export function OrcamentoModal({ open, onClose, orcamento, initialClienteId }: P
                                   onSelect={() => {
                                     addItemFromCatalogo(s.id);
                                     setCatalogoAberto(false);
+                                    setCatalogoSearch("");
                                   }}
                                   className="flex items-center justify-between cursor-pointer font-barlow py-2"
                                 >
@@ -585,9 +619,10 @@ export function OrcamentoModal({ open, onClose, orcamento, initialClienteId }: P
                     type="button"
                     variant="outline"
                     onClick={addAvulsoItem}
-                    className="h-10 font-oswald uppercase font-bold text-xs gap-1.5 shrink-0"
+                    className="h-12 font-oswald uppercase font-bold text-xs gap-1.5 shrink-0 px-3"
                   >
-                    <Plus className="h-3.5 w-3.5" /> Item Avulso
+                    <Plus className="h-4 w-4" />
+                    <span className="hidden sm:inline">Item Avulso</span>
                   </Button>
                 </div>
 
@@ -620,36 +655,47 @@ export function OrcamentoModal({ open, onClose, orcamento, initialClienteId }: P
                       return (
                         <div key={it.id || idx} className="border border-border rounded-xl bg-card overflow-hidden">
                           {/* Cabeçalho do card */}
-                          <div className="flex items-center gap-3 px-4 pt-3 pb-2">
+                          <div className="flex items-center gap-2 px-3 sm:px-4 pt-3 pb-2">
                             <span className="text-[10px] font-bold text-muted-foreground font-oswald w-5 shrink-0">#{idx + 1}</span>
                             <Input
                               value={it.nome || ""}
                               onChange={(e) => updateItem(idx, "nome", e.target.value)}
                               placeholder="Nome do serviço..."
-                              className="flex-1 font-oswald font-bold uppercase text-sm h-9 border-0 border-b border-border/50 rounded-none px-0 focus-visible:ring-0 bg-transparent"
+                              className="flex-1 font-oswald font-bold uppercase text-sm h-10 border-0 border-b border-border/50 rounded-none px-0 focus-visible:ring-0 bg-transparent"
                             />
                             <Button
                               type="button"
                               variant="ghost"
                               size="icon"
-                              className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                              className="h-10 w-10 shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                               onClick={() => removeItem(idx)}
                             >
-                              <Trash2 className="h-3.5 w-3.5" />
+                              <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
 
                           {/* Corpo do card */}
-                          <div className="px-4 pb-3 space-y-3">
-                            {/* Linha 1: Unidade + Quantidade */}
-                            <div className="flex items-center gap-3">
-                              <div className="space-y-1 w-40">
-                                <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground font-barlow">Unidade</p>
+                          <div className="px-3 sm:px-4 pb-3 space-y-3">
+                            {/* Linha mobile: Qtd + Unidade + Total numa linha só */}
+                            <div className="flex items-end gap-2">
+                              <div className="space-y-1">
+                                <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground font-barlow">Qtd</p>
+                                <Input
+                                  type="number"
+                                  min={0}
+                                  step="0.01"
+                                  value={it.quantidade ?? 1}
+                                  onChange={(e) => updateItem(idx, "quantidade", Number(e.target.value))}
+                                  className="h-11 w-20 text-center font-barlow text-base"
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground font-barlow">UN</p>
                                 <Select
                                   value={it.unidade || "un"}
                                   onValueChange={(v) => updateItem(idx, "unidade", v)}
                                 >
-                                  <SelectTrigger className="h-8 text-xs font-barlow">
+                                  <SelectTrigger className="h-11 w-24 text-xs font-barlow">
                                     <SelectValue />
                                   </SelectTrigger>
                                   <SelectContent>
@@ -661,63 +707,51 @@ export function OrcamentoModal({ open, onClose, orcamento, initialClienteId }: P
                                   </SelectContent>
                                 </Select>
                               </div>
-                              <div className="space-y-1 w-28">
-                                <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground font-barlow">Quantidade</p>
-                                <Input
-                                  type="number"
-                                  min={0}
-                                  step="0.01"
-                                  value={it.quantidade ?? 1}
-                                  onChange={(e) => updateItem(idx, "quantidade", Number(e.target.value))}
-                                  className="h-8 text-center font-barlow"
-                                />
-                              </div>
                               {/* Total do item em destaque */}
                               <div className="ml-auto text-right space-y-0.5">
-                                <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground font-barlow">Total do Item</p>
-                                <p className="font-oswald font-bold text-lg text-foreground">{fmt(totalItem)}</p>
+                                <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground font-barlow">Total</p>
+                                <p className="font-oswald font-bold text-xl text-foreground">{fmt(totalItem)}</p>
                               </div>
                             </div>
 
-                            {/* Linha 2: Custo + Venda */}
-                            <div className="grid grid-cols-2 gap-3">
-                              <div className="space-y-1">
-                                <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/60 font-barlow">Custo Unitário (interno)</p>
-                                <CurrencyInput
-                                  value={it.custo_unitario || 0}
-                                  onChange={(v) => updateItem(idx, "custo_unitario", v)}
-                                  className="h-8 text-right text-destructive/70 bg-destructive/5 border-destructive/20 text-xs"
-                                />
-                              </div>
-                              <div className="space-y-1">
-                                <p className="text-[9px] font-bold uppercase tracking-widest text-emerald-700 font-barlow">Preço de Venda (cliente)</p>
-                                <CurrencyInput
-                                  value={it.valor_unitario || 0}
-                                  onChange={(v) => updateItem(idx, "valor_unitario", v)}
-                                  className="h-8 text-right font-bold text-emerald-700 bg-emerald-500/5 border-emerald-500/30"
-                                />
-                              </div>
+                            {/* Preço de venda em destaque — campo principal mobile */}
+                            <div className="space-y-1">
+                              <p className="text-[9px] font-bold uppercase tracking-widest text-emerald-700 font-barlow">Preço Unitário (cliente)</p>
+                              <CurrencyInput
+                                value={it.valor_unitario || 0}
+                                onChange={(v) => updateItem(idx, "valor_unitario", v)}
+                                className="h-12 text-right font-bold text-emerald-700 bg-emerald-500/5 border-emerald-500/30 text-base"
+                              />
                             </div>
 
-                            {/* P3: Barra de margem sempre visível para orientar o preenchimento do custo */}
-                            <div className="space-y-1 pt-1">
-                              <div className="flex items-center justify-between">
-                                <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground font-barlow">Margem deste item</p>
-                                {custo > 0 ? (
-                                  <p className={cn("text-[10px] font-bold font-oswald", margemCor)}>
+                            {/* Custo interno — colapsável no mobile */}
+                            <details className="group">
+                              <summary className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-barlow cursor-pointer list-none py-1 select-none">
+                                <ChevronRight className="h-3 w-3 group-open:rotate-90 transition-transform" />
+                                Custo interno e margem
+                                {custo > 0 && (
+                                  <span className={cn("ml-auto font-bold font-oswald text-[11px]", margemCor)}>
                                     {margemItem.toFixed(0)}%
-                                  </p>
-                                ) : (
-                                  <p className="text-[9px] text-muted-foreground/50 italic font-barlow">Preencha o custo para calcular</p>
+                                  </span>
                                 )}
+                              </summary>
+                              <div className="pt-2 space-y-2">
+                                <div className="space-y-1">
+                                  <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/60 font-barlow">Custo Unitário (interno)</p>
+                                  <CurrencyInput
+                                    value={it.custo_unitario || 0}
+                                    onChange={(v) => updateItem(idx, "custo_unitario", v)}
+                                    className="h-11 text-right text-destructive/70 bg-destructive/5 border-destructive/20"
+                                  />
+                                </div>
+                                <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
+                                  <Progress
+                                    value={custo > 0 ? Math.min(Math.max(margemItem, 0), 100) : 0}
+                                    className={cn("h-1.5", custo > 0 ? barCor : "opacity-20")}
+                                  />
+                                </div>
                               </div>
-                              <div className="h-1 w-full bg-muted rounded-full overflow-hidden">
-                                <div
-                                  className={cn("h-full rounded-full transition-all duration-300", custo > 0 ? barCor : "bg-muted-foreground/20")}
-                                  style={{ width: custo > 0 ? `${Math.min(Math.max(margemItem, 0), 100)}%` : "0%" }}
-                                />
-                              </div>
-                            </div>
+                            </details>
                           </div>
                         </div>
                       );
@@ -763,7 +797,7 @@ export function OrcamentoModal({ open, onClose, orcamento, initialClienteId }: P
                     <Label className="uppercase text-[10px] font-bold tracking-widest text-muted-foreground">Emissão da Proposta</Label>
                     <Popover>
                       <PopoverTrigger asChild>
-                        <Button type="button" variant="outline" className="w-full justify-start text-left font-normal h-10 font-barlow">
+                        <Button type="button" variant="outline" className="w-full justify-start text-left font-normal h-12 font-barlow">
                           <CalendarIcon className="mr-2 h-4 w-4" />
                           {format(form.data_emissao, "dd/MM/yyyy", { locale: ptBR })}
                         </Button>
@@ -779,7 +813,7 @@ export function OrcamentoModal({ open, onClose, orcamento, initialClienteId }: P
                     <Label className="uppercase text-[10px] font-bold tracking-widest text-muted-foreground">Proposta Válida Até</Label>
                     <Popover>
                       <PopoverTrigger asChild>
-                        <Button type="button" variant="outline" className={cn("w-full justify-start text-left font-normal h-10 font-barlow", !form.validade && "text-muted-foreground")}>
+                        <Button type="button" variant="outline" className={cn("w-full justify-start text-left font-normal h-12 font-barlow", !form.validade && "text-muted-foreground")}>
                           <CalendarIcon className="mr-2 h-4 w-4" />
                           {form.validade ? format(form.validade, "dd/MM/yyyy", { locale: ptBR }) : "Selecionar..."}
                         </Button>
@@ -795,8 +829,7 @@ export function OrcamentoModal({ open, onClose, orcamento, initialClienteId }: P
                           key={dias}
                           type="button"
                           variant="outline"
-                          size="sm"
-                          className="h-6 flex-1 text-[10px] font-bold font-oswald"
+                          className="h-10 flex-1 text-xs font-bold font-oswald"
                           onClick={() => setForm(prev => ({ ...prev, validade: addDays(new Date(), dias) }))}
                         >
                           +{dias}d
@@ -810,7 +843,7 @@ export function OrcamentoModal({ open, onClose, orcamento, initialClienteId }: P
                     <Label className="uppercase text-[10px] font-bold tracking-widest text-muted-foreground">Previsão Inicial Obra</Label>
                     <Popover>
                       <PopoverTrigger asChild>
-                        <Button type="button" variant="outline" className={cn("w-full justify-start text-left font-normal h-10 font-barlow", !form.data_prevista_inicio && "text-muted-foreground")}>
+                        <Button type="button" variant="outline" className={cn("w-full justify-start text-left font-normal h-12 font-barlow", !form.data_prevista_inicio && "text-muted-foreground")}>
                           <CalendarIcon className="mr-2 h-4 w-4" />
                           {form.data_prevista_inicio ? format(form.data_prevista_inicio, "dd/MM/yyyy", { locale: ptBR }) : "Opcional..."}
                         </Button>
@@ -1049,25 +1082,47 @@ export function OrcamentoModal({ open, onClose, orcamento, initialClienteId }: P
             </div>
 
             {/* Rodapé de navegação */}
-            <div className="p-6 border-t border-border bg-muted/20 shrink-0 flex items-center justify-between">
-              <div>
+            <div className="px-4 sm:px-6 py-4 border-t border-border bg-muted/20 shrink-0 flex items-center justify-between gap-3">
+              <div className="shrink-0">
                 {activeTab !== "dados" ? (
-                  <Button type="button" variant="outline" className="font-oswald font-bold uppercase tracking-widest h-11 px-6 shadow-sm flex items-center gap-2" onClick={goPrev}>
-                    <ChevronLeft className="h-4 w-4" /> Anterior
+                  <Button type="button" variant="outline" className="font-oswald font-bold uppercase tracking-widest h-12 px-4 sm:px-6 shadow-sm flex items-center gap-2" onClick={goPrev}>
+                    <ChevronLeft className="h-4 w-4" />
+                    <span className="hidden sm:inline">Anterior</span>
                   </Button>
                 ) : (
-                  <Button type="button" variant="ghost" onClick={onClose} disabled={isSaving}>Cancelar</Button>
+                  <Button type="button" variant="ghost" className="h-12 px-4 font-barlow" onClick={onClose} disabled={isSaving}>
+                    Cancelar
+                  </Button>
                 )}
               </div>
 
-              <div>
+              {/* Indicador central no mobile */}
+              <div className="flex-1 flex justify-center sm:hidden">
+                <div className="flex gap-1.5">
+                  {TAB_ORDER.map((tab) => (
+                    <div
+                      key={tab}
+                      className={cn(
+                        "h-1.5 rounded-full transition-all",
+                        tab === activeTab ? "w-5 bg-primary" : "w-1.5 bg-muted-foreground/30"
+                      )}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <div className="shrink-0">
                 {activeTab !== "revisao" ? (
-                  <Button type="button" variant="default" className="font-oswald font-bold uppercase tracking-widest h-11 px-6 shadow-md flex items-center gap-2 bg-primary text-primary-foreground hover:opacity-90" onClick={goNext}>
-                    Próxima Etapa <ChevronRight className="h-4 w-4" />
+                  <Button type="button" variant="default" className="font-oswald font-bold uppercase tracking-widest h-12 px-4 sm:px-6 shadow-md flex items-center gap-2 bg-primary text-primary-foreground hover:opacity-90" onClick={goNext}>
+                    <span className="hidden sm:inline">Próxima</span>
+                    <span className="sm:hidden">Avançar</span>
+                    <ChevronRight className="h-4 w-4" />
                   </Button>
                 ) : (
-                  <Button type="button" onClick={handleSubmit} disabled={isSaving} className="font-oswald font-bold uppercase tracking-widest h-11 px-6 bg-emerald-600 text-white hover:bg-emerald-700 shadow-md flex items-center gap-2 scale-105 active:scale-100 transition-all">
-                    <Save className="h-4 w-4" /> {isEdit ? "Salvar Proposta" : "Gerar Proposta Ouro"}
+                  <Button type="button" onClick={handleSubmit} disabled={isSaving} className="font-oswald font-bold uppercase tracking-widest h-12 px-4 sm:px-6 bg-emerald-600 text-white hover:bg-emerald-700 shadow-md flex items-center gap-2 active:scale-95 transition-all">
+                    <Save className="h-4 w-4" />
+                    <span className="hidden sm:inline">{isEdit ? "Salvar Proposta" : "Gerar Proposta"}</span>
+                    <span className="sm:hidden">{isEdit ? "Salvar" : "Gerar"}</span>
                   </Button>
                 )}
               </div>
