@@ -349,11 +349,10 @@ export function OrcamentoModal({ open, onClose, orcamento, initialClienteId }: P
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent
         onInteractOutside={(e) => e.preventDefault()}
-        className="max-w-[900px] w-full p-0 gap-0 bg-background shadow-2xl
-          h-dvh rounded-none
-          sm:h-auto sm:max-h-[90vh] sm:rounded-2xl"
+        className="max-w-[900px] w-full p-0 gap-0 bg-background shadow-2xl overflow-hidden
+          h-dvh sm:h-[90vh] sm:max-h-[90vh] rounded-none sm:rounded-2xl"
       >
-        <div className="flex flex-col h-full sm:max-h-[90vh]">
+        <div className="flex flex-col h-full">
 
           {/* Header */}
           <DialogHeader className="px-4 sm:px-6 py-3 sm:py-4 border-b border-border bg-muted/20 shrink-0">
@@ -424,8 +423,8 @@ export function OrcamentoModal({ open, onClose, orcamento, initialClienteId }: P
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
                       <Label className="text-xs font-barlow font-bold">Cliente Contratante</Label>
-                      <Button type="button" variant="ghost" size="icon" className="h-5 w-5 bg-primary/10 hover:bg-primary/20" onClick={() => setNewClientModalOpen(true)} title="Novo Cliente">
-                        <UserPlus className="h-3 w-3 text-primary" />
+                      <Button type="button" variant="ghost" size="icon" className="h-8 w-8 bg-primary/10 hover:bg-primary/20" onClick={() => setNewClientModalOpen(true)} title="Novo Cliente">
+                        <UserPlus className="h-4 w-4 text-primary" />
                       </Button>
                     </div>
                     <Select value={form.clienteId ?? "_none"} onValueChange={handleClienteChange}>
@@ -450,8 +449,8 @@ export function OrcamentoModal({ open, onClose, orcamento, initialClienteId }: P
                           <Building2 className="h-3 w-3 text-primary" />
                           Condomínio
                         </Label>
-                        <Button type="button" variant="ghost" size="icon" className="h-5 w-5 bg-primary/10 hover:bg-primary/20" onClick={() => setNewCondominioModalOpen(true)} title="Novo Condomínio">
-                          <Plus className="h-3 w-3 text-primary" />
+                        <Button type="button" variant="ghost" size="icon" className="h-8 w-8 bg-primary/10 hover:bg-primary/20" onClick={() => setNewCondominioModalOpen(true)} title="Novo Condomínio">
+                          <Plus className="h-4 w-4 text-primary" />
                         </Button>
                       </div>
                       <Select value={form.condominioId ?? "_none"} onValueChange={handleCondominioChange}>
@@ -567,7 +566,7 @@ export function OrcamentoModal({ open, onClose, orcamento, initialClienteId }: P
                           value={catalogoSearch}
                           onValueChange={setCatalogoSearch}
                         />
-                        <CommandList>
+                        <CommandList className="max-h-64 overflow-y-auto">
                           <CommandEmpty className="py-6 text-center text-sm text-muted-foreground font-barlow">
                             Nenhum serviço encontrado.
                           </CommandEmpty>
@@ -791,47 +790,40 @@ export function OrcamentoModal({ open, onClose, orcamento, initialClienteId }: P
                   <p className="text-sm text-muted-foreground font-barlow italic">Defina as datas e a forma de pagamento. Clareza aqui evita problemas no futuro.</p>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   {/* Emissão */}
                   <div className="space-y-1.5">
-                    <Label className="uppercase text-[10px] font-bold tracking-widest text-muted-foreground">Emissão da Proposta</Label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button type="button" variant="outline" className="w-full justify-start text-left font-normal h-12 font-barlow">
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {format(form.data_emissao, "dd/MM/yyyy", { locale: ptBR })}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar mode="single" selected={form.data_emissao} onSelect={(d) => d && setForm(prev => ({ ...prev, data_emissao: d }))} initialFocus className="p-3 pointer-events-auto" />
-                      </PopoverContent>
-                    </Popover>
+                    <Label className="uppercase text-[10px] font-bold tracking-widest text-muted-foreground flex items-center gap-1.5">
+                      <CalendarIcon className="h-3 w-3" /> Emissão
+                    </Label>
+                    <input
+                      type="date"
+                      aria-label="Data de emissão"
+                      value={format(form.data_emissao, "yyyy-MM-dd")}
+                      onChange={(e) => e.target.value && setForm(prev => ({ ...prev, data_emissao: new Date(e.target.value + "T12:00:00") }))}
+                      className="flex h-12 w-full rounded-md border border-input bg-background px-3 py-2 text-sm font-barlow ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    />
                   </div>
 
-                  {/* Validade com atalhos */}
+                  {/* Validade */}
                   <div className="space-y-1.5">
-                    <Label className="uppercase text-[10px] font-bold tracking-widest text-muted-foreground">Proposta Válida Até</Label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button type="button" variant="outline" className={cn("w-full justify-start text-left font-normal h-12 font-barlow", !form.validade && "text-muted-foreground")}>
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {form.validade ? format(form.validade, "dd/MM/yyyy", { locale: ptBR }) : "Selecionar..."}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar mode="single" selected={form.validade ?? undefined} onSelect={(d) => setForm(prev => ({ ...prev, validade: d ?? null }))} initialFocus className="p-3 pointer-events-auto" />
-                      </PopoverContent>
-                    </Popover>
-                    {/* Atalhos de validade */}
-                    <div className="flex gap-1.5">
+                    <Label className="uppercase text-[10px] font-bold tracking-widest text-muted-foreground flex items-center gap-1.5">
+                      <CalendarIcon className="h-3 w-3" /> Válida Até
+                    </Label>
+                    <input
+                      type="date"
+                      aria-label="Data de validade"
+                      value={form.validade ? format(form.validade, "yyyy-MM-dd") : ""}
+                      onChange={(e) => setForm(prev => ({ ...prev, validade: e.target.value ? new Date(e.target.value + "T12:00:00") : null }))}
+                      className="flex h-12 w-full rounded-md border border-input bg-background px-3 py-2 text-sm font-barlow ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    />
+                    </div>
+                    {/* Atalhos rápidos */}
+                    <div className="grid grid-cols-3 gap-2">
                       {[7, 15, 30].map(dias => (
-                        <Button
-                          key={dias}
-                          type="button"
-                          variant="outline"
+                        <Button key={dias} type="button" variant="outline"
                           className="h-10 flex-1 text-xs font-bold font-oswald"
-                          onClick={() => setForm(prev => ({ ...prev, validade: addDays(new Date(), dias) }))}
-                        >
+                          onClick={() => setForm(prev => ({ ...prev, validade: addDays(new Date(), dias) }))}>
                           +{dias}d
                         </Button>
                       ))}
@@ -840,39 +832,83 @@ export function OrcamentoModal({ open, onClose, orcamento, initialClienteId }: P
 
                   {/* Previsão de início */}
                   <div className="space-y-1.5">
-                    <Label className="uppercase text-[10px] font-bold tracking-widest text-muted-foreground">Previsão Inicial Obra</Label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button type="button" variant="outline" className={cn("w-full justify-start text-left font-normal h-12 font-barlow", !form.data_prevista_inicio && "text-muted-foreground")}>
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {form.data_prevista_inicio ? format(form.data_prevista_inicio, "dd/MM/yyyy", { locale: ptBR }) : "Opcional..."}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar mode="single" selected={form.data_prevista_inicio ?? undefined} onSelect={(d) => setForm(prev => ({ ...prev, data_prevista_inicio: d ?? null }))} initialFocus className="p-3 pointer-events-auto" />
-                      </PopoverContent>
-                    </Popover>
+                    <Label className="uppercase text-[10px] font-bold tracking-widest text-muted-foreground flex items-center gap-1.5">
+                      <CalendarIcon className="h-3 w-3" /> Início Previsto
+                    </Label>
+                    <input
+                      type="date"
+                      aria-label="Previsão de início da obra"
+                      value={form.data_prevista_inicio ? format(form.data_prevista_inicio, "yyyy-MM-dd") : ""}
+                      onChange={(e) => setForm(prev => ({ ...prev, data_prevista_inicio: e.target.value ? new Date(e.target.value + "T12:00:00") : null }))}
+                      className="flex h-12 w-full rounded-md border border-input bg-background px-3 py-2 text-sm font-barlow ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    />
                   </div>
                 </div>
 
-                {/* Condições — Textarea para texto longo */}
+                {/* Condições — Textarea com pills rápidas */}
                 <div className="space-y-4 pt-4 border-t border-border">
-                  <div className="space-y-1.5">
+                  <div className="space-y-2">
                     <Label className="uppercase text-[10px] font-bold tracking-widest text-muted-foreground">Condições de Pagamento</Label>
+                    {/* Pills de atalho — toque único no celular */}
+                    <div className="flex flex-wrap gap-2">
+                      {[
+                        "50% na aprovação + 50% na conclusão.",
+                        "100% na conclusão.",
+                        "30% entrada + 70% na conclusão.",
+                        "À vista na conclusão.",
+                        "3x iguais mensais.",
+                      ].map((opt) => (
+                        <button
+                          key={opt}
+                          type="button"
+                          onClick={() => setForm(prev => ({ ...prev, condicoes_pagamento: opt }))}
+                          className={cn(
+                            "px-3 py-1.5 rounded-full text-xs font-barlow border transition-all",
+                            form.condicoes_pagamento === opt
+                              ? "bg-primary text-primary-foreground border-primary"
+                              : "bg-muted border-border text-muted-foreground hover:bg-muted/80"
+                          )}
+                        >
+                          {opt}
+                        </button>
+                      ))}
+                    </div>
                     <Textarea
                       value={form.condicoes_pagamento}
                       onChange={(e) => setForm(prev => ({ ...prev, condicoes_pagamento: e.target.value }))}
-                      placeholder="Ex: 50% de entrada na assinatura do contrato e 50% na conclusão."
+                      placeholder="Ou digite livremente..."
                       rows={2}
                       className="font-barlow"
                     />
                   </div>
-                  <div className="space-y-1.5">
-                    <Label className="uppercase text-[10px] font-bold tracking-widest text-muted-foreground">Prazo de Execução (Cláusula)</Label>
+                  <div className="space-y-2">
+                    <Label className="uppercase text-[10px] font-bold tracking-widest text-muted-foreground">Prazo de Execução</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {[
+                        "Aprox. 7 dias úteis.",
+                        "Aprox. 15 dias úteis.",
+                        "Aprox. 30 dias úteis.",
+                        "A combinar após aprovação.",
+                      ].map((opt) => (
+                        <button
+                          key={opt}
+                          type="button"
+                          onClick={() => setForm(prev => ({ ...prev, prazo_execucao: opt }))}
+                          className={cn(
+                            "px-3 py-1.5 rounded-full text-xs font-barlow border transition-all",
+                            form.prazo_execucao === opt
+                              ? "bg-primary text-primary-foreground border-primary"
+                              : "bg-muted border-border text-muted-foreground hover:bg-muted/80"
+                          )}
+                        >
+                          {opt}
+                        </button>
+                      ))}
+                    </div>
                     <Textarea
                       value={form.prazo_execucao}
                       onChange={(e) => setForm(prev => ({ ...prev, prazo_execucao: e.target.value }))}
-                      placeholder="Ex: Aprox. 20 dias úteis, condicionados às condições do tempo e materialização."
+                      placeholder="Ou digite livremente..."
                       rows={2}
                       className="font-barlow"
                     />
@@ -889,46 +925,66 @@ export function OrcamentoModal({ open, onClose, orcamento, initialClienteId }: P
                   <p className="text-sm text-muted-foreground font-barlow italic">O que NÃO está incluso e quais as responsabilidades do cliente.</p>
                 </div>
 
-                <div className="space-y-1.5">
-                  <Label className="uppercase text-[10px] font-bold tracking-widest text-muted-foreground flex items-center gap-1.5">
-                    O que NÃO está incluso (Exclusões)
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild><Info className="h-3 w-3 cursor-help text-muted-foreground/50" /></TooltipTrigger>
-                        <TooltipContent className="text-xs">Crucial para evitar que o cliente cobre coisas que não foram combinadas.</TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </Label>
-                  <Textarea
-                    value={form.exclusoes}
-                    onChange={(e) => setForm(prev => ({ ...prev, exclusoes: e.target.value }))}
-                    placeholder="Liste o que o orçamento NÃO cobre (ex: fornecimento de porcelanato, caçamba de entulho...)."
-                    rows={3}
-                    className="font-barlow"
-                  />
-                  <p className="text-[10px] text-muted-foreground pt-1">É importantíssimo proteger a PratesPaiva contra expectativas irreais do cliente.</p>
-                </div>
+                <div className="space-y-3">
+                  <details open className="group rounded-xl border border-border/60 overflow-hidden">
+                    <summary className="flex items-center justify-between px-4 py-3 cursor-pointer select-none bg-muted/30 hover:bg-muted/50 transition-colors list-none">
+                      <span className="uppercase text-[10px] font-bold tracking-widest text-muted-foreground flex items-center gap-1.5">
+                        O que NÃO está incluso (Exclusões)
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild><Info className="h-3 w-3 cursor-help text-muted-foreground/50" /></TooltipTrigger>
+                            <TooltipContent className="text-xs">Crucial para evitar que o cliente cobre coisas que não foram combinadas.</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </span>
+                      <span className="text-[10px] text-muted-foreground font-barlow group-open:hidden">toque para expandir ▾</span>
+                      <span className="text-[10px] text-muted-foreground font-barlow hidden group-open:inline">▴</span>
+                    </summary>
+                    <div className="px-4 py-3 space-y-2">
+                      <Textarea
+                        value={form.exclusoes}
+                        onChange={(e) => setForm(prev => ({ ...prev, exclusoes: e.target.value }))}
+                        placeholder="Liste o que o orçamento NÃO cobre (ex: fornecimento de porcelanato, caçamba de entulho...)."
+                        rows={3}
+                        className="font-barlow"
+                      />
+                      <p className="text-[10px] text-muted-foreground">Protege a PratesPaiva contra expectativas irreais do cliente.</p>
+                    </div>
+                  </details>
 
-                <div className="space-y-1.5 pt-2">
-                  <Label className="uppercase text-[10px] font-bold tracking-widest text-muted-foreground">Responsabilidade do Contratante</Label>
-                  <Textarea
-                    value={form.responsabilidades}
-                    onChange={(e) => setForm(prev => ({ ...prev, responsabilidades: e.target.value }))}
-                    placeholder="O que o cliente precisa fazer (ex: retirar itens pessoais do local, fornecer material básico, etc)."
-                    rows={3}
-                    className="font-barlow"
-                  />
-                </div>
+                  <details className="group rounded-xl border border-border/60 overflow-hidden">
+                    <summary className="flex items-center justify-between px-4 py-3 cursor-pointer select-none bg-muted/30 hover:bg-muted/50 transition-colors list-none">
+                      <span className="uppercase text-[10px] font-bold tracking-widest text-muted-foreground">Responsabilidade do Contratante</span>
+                      <span className="text-[10px] text-muted-foreground font-barlow group-open:hidden">toque para expandir ▾</span>
+                      <span className="text-[10px] text-muted-foreground font-barlow hidden group-open:inline">▴</span>
+                    </summary>
+                    <div className="px-4 py-3">
+                      <Textarea
+                        value={form.responsabilidades}
+                        onChange={(e) => setForm(prev => ({ ...prev, responsabilidades: e.target.value }))}
+                        placeholder="O que o cliente precisa fazer (ex: retirar itens pessoais do local, fornecer material básico, etc)."
+                        rows={3}
+                        className="font-barlow"
+                      />
+                    </div>
+                  </details>
 
-                <div className="space-y-1.5 pt-2">
-                  <Label className="uppercase text-[10px] font-bold tracking-widest text-muted-foreground">Notas Internas (Apenas para nós)</Label>
-                  <Textarea
-                    value={form.observacoes}
-                    onChange={(e) => setForm(prev => ({ ...prev, observacoes: e.target.value }))}
-                    placeholder="Comentários internos confidenciais... (não aparece no PDF do cliente)"
-                    rows={3}
-                    className="font-barlow bg-orange-50 border-orange-200 dark:bg-orange-950/20 dark:border-orange-900/40"
-                  />
+                  <details className="group rounded-xl border border-orange-200 dark:border-orange-900/40 overflow-hidden">
+                    <summary className="flex items-center justify-between px-4 py-3 cursor-pointer select-none bg-orange-50 dark:bg-orange-950/20 hover:bg-orange-100/60 dark:hover:bg-orange-950/30 transition-colors list-none">
+                      <span className="uppercase text-[10px] font-bold tracking-widest text-orange-700 dark:text-orange-400">Notas Internas (Apenas para nós)</span>
+                      <span className="text-[10px] text-orange-500 font-barlow group-open:hidden">toque para expandir ▾</span>
+                      <span className="text-[10px] text-orange-500 font-barlow hidden group-open:inline">▴</span>
+                    </summary>
+                    <div className="px-4 py-3">
+                      <Textarea
+                        value={form.observacoes}
+                        onChange={(e) => setForm(prev => ({ ...prev, observacoes: e.target.value }))}
+                        placeholder="Comentários internos confidenciais... (não aparece no PDF do cliente)"
+                        rows={3}
+                        className="font-barlow bg-orange-50 border-orange-200 dark:bg-orange-950/20 dark:border-orange-900/40"
+                      />
+                    </div>
+                  </details>
                 </div>
               </TabsContent>
 
