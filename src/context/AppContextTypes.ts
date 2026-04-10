@@ -118,29 +118,42 @@ export function mapFerramenta(row: FerramentaRow): Ferramenta {
   };
 }
 
+interface RawCatalogoServicoRow extends CatalogoServicoRow {
+  custo_material?: number;
+  custo_mao_obra?: number;
+  custo_deslocamento?: number;
+  custo_extras?: number;
+  margem_desejada?: number;
+  tipo_servico?: string;
+  dificuldade?: string;
+  tempo_medio?: string;
+  equipe_necessaria?: string;
+}
+
 export function mapCatalogoServico(row: CatalogoServicoRow): CatalogoServico {
+  const r = row as RawCatalogoServicoRow;
   return {
-    id: row.id,
-    nome: row.nome,
-    unidade_padrao: row.unidade_padrao,
-    valor_base_sugerido: Number(row.valor_base_sugerido),
-    custo_padrao: Number(row.custo_padrao),
+    id: r.id,
+    nome: r.nome,
+    unidade_padrao: r.unidade_padrao,
+    valor_base_sugerido: Number(r.valor_base_sugerido),
+    custo_padrao: Number(r.custo_padrao),
     // Custo granular (com fallback seguro)
-    custo_material:     Number((row as any).custo_material ?? 0),
-    custo_mao_obra:     Number((row as any).custo_mao_obra ?? 0),
-    custo_deslocamento: Number((row as any).custo_deslocamento ?? 0),
-    custo_extras:       Number((row as any).custo_extras ?? 0),
-    margem_desejada:    Number((row as any).margem_desejada ?? 35),
+    custo_material:     Number(r.custo_material ?? 0),
+    custo_mao_obra:     Number(r.custo_mao_obra ?? 0),
+    custo_deslocamento: Number(r.custo_deslocamento ?? 0),
+    custo_extras:       Number(r.custo_extras ?? 0),
+    margem_desejada:    Number(r.margem_desejada ?? 35),
     // Classificação
-    prestador_padrao_id: row.prestador_padrao_id,
-    categoria:    row.categoria ?? null,
-    subcategoria: row.subcategoria ?? null,
+    prestador_padrao_id: r.prestador_padrao_id,
+    categoria:    r.categoria ?? null,
+    subcategoria: r.subcategoria ?? null,
     // Metadados operacionais
-    tipo_servico:      ((row as any).tipo_servico ?? null) as CatalogoServico["tipo_servico"],
-    dificuldade:       ((row as any).dificuldade ?? null) as CatalogoServico["dificuldade"],
-    tempo_medio:       (row as any).tempo_medio ?? null,
-    equipe_necessaria: (row as any).equipe_necessaria ?? null,
-    criado_em: row.criado_em,
+    tipo_servico:      (r.tipo_servico ?? null) as CatalogoServico["tipo_servico"],
+    dificuldade:       (r.dificuldade ?? null) as CatalogoServico["dificuldade"],
+    tempo_medio:       r.tempo_medio ?? null,
+    equipe_necessaria: r.equipe_necessaria ?? null,
+    criado_em: r.criado_em,
   };
 }
 

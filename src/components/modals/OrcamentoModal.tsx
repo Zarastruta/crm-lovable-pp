@@ -355,7 +355,7 @@ export function OrcamentoModal({ open, onClose, orcamento, initialClienteId }: P
         <div className="flex flex-col h-full">
 
           {/* Header */}
-          <DialogHeader className="px-4 sm:px-6 py-3 sm:py-4 border-b border-border bg-muted/20 shrink-0">
+          <DialogHeader className="px-4 sm:px-6 py-3 sm:py-4 border-b border-border bg-muted/20 shrink-0 pr-12 sm:pr-6">
             <div className="flex items-center justify-between">
               <DialogTitle className="text-lg sm:text-2xl font-bold font-oswald uppercase tracking-tight leading-tight">
                 {isEdit ? "Editar Proposta" : "Nova Proposta"}
@@ -817,7 +817,6 @@ export function OrcamentoModal({ open, onClose, orcamento, initialClienteId }: P
                       onChange={(e) => setForm(prev => ({ ...prev, validade: e.target.value ? new Date(e.target.value + "T12:00:00") : null }))}
                       className="flex h-12 w-full rounded-md border border-input bg-background px-3 py-2 text-sm font-barlow ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     />
-                    </div>
                     {/* Atalhos rápidos */}
                     <div className="grid grid-cols-3 gap-2">
                       {[7, 15, 30].map(dias => (
@@ -1138,7 +1137,7 @@ export function OrcamentoModal({ open, onClose, orcamento, initialClienteId }: P
             </div>
 
             {/* Rodapé de navegação */}
-            <div className="px-4 sm:px-6 py-4 border-t border-border bg-muted/20 shrink-0 flex items-center justify-between gap-3">
+            <div className="px-4 sm:px-6 py-4 border-t border-border bg-background sm:bg-muted/20 shrink-0 flex items-center justify-between gap-3 sticky bottom-0 z-10">
               <div className="shrink-0">
                 {activeTab !== "dados" ? (
                   <Button type="button" variant="outline" className="font-oswald font-bold uppercase tracking-widest h-12 px-4 sm:px-6 shadow-sm flex items-center gap-2" onClick={goPrev}>
