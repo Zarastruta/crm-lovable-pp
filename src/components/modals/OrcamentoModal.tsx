@@ -203,10 +203,34 @@ export function OrcamentoModal({ open, onClose, orcamento, initialClienteId }: P
     setForm(prev => ({ ...prev, ...updates }));
   };
 
+  // ─── Auto-Fill Teste (Prates Paiva) ──────────────────────────────────────
+  const fillTestPratesPaiva = () => {
+    setForm(prev => ({
+      ...prev,
+      titulo: "Reforma Cobertura Palmas (Patrícia)",
+      descricao: "Orçamento de serviços contendo retirada de parapeito, alvenaria, impermeabilizações e recolocação de peças conforme escopo em PDF.",
+      endereco_obra: "Residencial Costão de Palmas — SC",
+    }));
+    setActiveTab("servicos");
+    setItems([
+      { id: crypto.randomUUID(), servico_id: null, nome: "Retirada do parapeito de vidro e alumínio", unidade: "vb", quantidade: 1, valor_unitario: 0, custo_unitario: 0, funcionario_id: null },
+      { id: crypto.randomUUID(), servico_id: null, nome: "Retirada de pingadeiras de mármore", unidade: "m", quantidade: 90, valor_unitario: 0, custo_unitario: 0, funcionario_id: null },
+      { id: crypto.randomUUID(), servico_id: null, nome: "Reboco pelo lado interno do muro", unidade: "m²", quantidade: 1, valor_unitario: 0, custo_unitario: 0, funcionario_id: null },
+      { id: crypto.randomUUID(), servico_id: null, nome: "Acabamento e impermeabilização nas pingadeiras", unidade: "m", quantidade: 90, valor_unitario: 0, custo_unitario: 0, funcionario_id: null },
+      { id: crypto.randomUUID(), servico_id: null, nome: "MÃO DE OBRA TOTAL (Subtotal)", unidade: "vb", quantidade: 1, valor_unitario: 33000, custo_unitario: 0, funcionario_id: null },
+    ]);
+    toast.success("Dados de teste da Prates Paiva injetados com sucesso!");
+  };
+
   // ─── Itens ────────────────────────────────────────────────────────────────
   const addItemFromCatalogo = (servicoId: string) => {
     const srv = catalogoServicos.find(s => s.id === servicoId);
     if (!srv) return;
+    // FIX P0: detectar duplicata antes de adicionar
+    const jaExiste = items.some(it => it.servico_id === srv.id);
+    if (jaExiste) {
+      toast.warning(`"${srv.nome}" já está na lista. Verifique antes de adicionar novamente.`);
+    }
     setItems(prev => [
       ...prev,
       {
@@ -260,9 +284,30 @@ export function OrcamentoModal({ open, onClose, orcamento, initialClienteId }: P
       setActiveTab("dados");
       return;
     }
+    // FIX P0: bloquear orçamento sem itens
+    if (items.length === 0) {
+      toast.error("Adicione pelo menos um serviço antes de gerar a proposta.");
+      setActiveTab("servicos");
+      return;
+    }
     const itensSemNome = items.filter(it => !it.nome?.trim());
     if (itensSemNome.length > 0) {
       toast.error(`${itensSemNome.length} item(s) sem nome. Preencha antes de salvar.`);
+      setActiveTab("servicos");
+      return;
+    }
+    // FIX P0: alertar itens com valor zerado (não bloqueia, mas avisa)
+    const itensComValorZero = items.filter(it => !it.valor_unitario || it.valor_unitario === 0);
+    if (itensComValorZero.length > 0) {
+      toast.warning(
+        `${itensComValorZero.length} item(s) com valor R$ 0,00: ${itensComValorZero.map(i => i.nome || "sem nome").join(", ")}. Verifique antes de enviar ao cliente.`,
+        { duration: 6000 }
+      );
+    }
+    // FIX bonus: alertar itens com quantidade zero
+    const itensQtdZero = items.filter(it => !it.quantidade || it.quantidade === 0);
+    if (itensQtdZero.length > 0) {
+      toast.warning(`${itensQtdZero.length} item(s) com quantidade zero. Corrija antes de enviar.`, { duration: 5000 });
       setActiveTab("servicos");
       return;
     }
@@ -332,6 +377,10 @@ export function OrcamentoModal({ open, onClose, orcamento, initialClienteId }: P
 
   // ─── Navegação entre tabs ─────────────────────────────────────────────────
   const goNext = () => {
+    // FIX P1: aviso suave ao sair do Passo 2 sem serviços
+    if (activeTab === "servicos" && items.length === 0) {
+      toast.warning("Nenhum serviço adicionado. Você pode voltar e adicionar depois.", { duration: 4000 });
+    }
     const idx = TAB_ORDER.indexOf(activeTab);
     if (idx < TAB_ORDER.length - 1) setActiveTab(TAB_ORDER[idx + 1]);
   };
@@ -623,6 +672,15 @@ export function OrcamentoModal({ open, onClose, orcamento, initialClienteId }: P
                     <Plus className="h-4 w-4" />
                     <span className="hidden sm:inline">Item Avulso</span>
                   </Button>
+
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={fillTestPratesPaiva}
+                    className="h-12 font-oswald uppercase font-bold text-xs gap-1.5 shrink-0 px-3 bg-purple-100 text-purple-700 hover:bg-purple-200"
+                  >
+                    <span>⚡ Auto-Preencher Teste</span>
+                  </Button>
                 </div>
 
                 {/* Lista de itens como cards */}
@@ -728,10 +786,13 @@ export function OrcamentoModal({ open, onClose, orcamento, initialClienteId }: P
                               <summary className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-barlow cursor-pointer list-none py-1 select-none">
                                 <ChevronRight className="h-3 w-3 group-open:rotate-90 transition-transform" />
                                 Custo interno e margem
-                                {custo > 0 && (
+                                {/* FIX P0: só mostra % se custo foi preenchido. custo=0 era enganosamente verde */}
+                                {custo > 0 ? (
                                   <span className={cn("ml-auto font-bold font-oswald text-[11px]", margemCor)}>
-                                    {margemItem.toFixed(0)}%
+                                    {margemItem.toFixed(0)}% margem
                                   </span>
+                                ) : (
+                                  <span className="ml-auto text-[10px] text-orange-500 font-barlow italic">custo não informado</span>
                                 )}
                               </summary>
                               <div className="pt-2 space-y-2">
@@ -743,12 +804,19 @@ export function OrcamentoModal({ open, onClose, orcamento, initialClienteId }: P
                                     className="h-11 text-right text-destructive/70 bg-destructive/5 border-destructive/20"
                                   />
                                 </div>
-                                <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
-                                  <Progress
-                                    value={custo > 0 ? Math.min(Math.max(margemItem, 0), 100) : 0}
-                                    className={cn("h-1.5", custo > 0 ? barCor : "opacity-20")}
-                                  />
-                                </div>
+                                {/* FIX P0: barra só renderiza quando custo real existe */}
+                                {custo > 0 ? (
+                                  <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
+                                    <Progress
+                                      value={Math.min(Math.max(margemItem, 0), 100)}
+                                      className={cn("h-1.5", barCor)}
+                                    />
+                                  </div>
+                                ) : (
+                                  <p className="text-[10px] text-orange-500 font-barlow italic">
+                                    Preencha o custo para calcular a margem real deste item.
+                                  </p>
+                                )}
                               </div>
                             </details>
                           </div>
