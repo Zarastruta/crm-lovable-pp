@@ -1,14 +1,15 @@
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Search, ChevronRight, FileText } from "lucide-react";
+import { Plus, Search, ChevronRight, FileText, MessageCircle } from "lucide-react";
 import { useApp } from "@/context/AppContext";
-import { StatusOrcamento } from "@/types";
+import { StatusOrcamento, OrcamentoDraft } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { OrcamentoStatusBadge, VencimentoBadge } from "@/components/shared/Badges";
 import { OrcamentoModal } from "@/components/modals/OrcamentoModal";
+import { WhatsAppParserModal } from "@/components/modals/WhatsAppParserModal";
 import { SkeletonList } from "@/components/shared/SkeletonCard";
 
 export default function Orcamentos() {
@@ -18,6 +19,13 @@ export default function Orcamentos() {
   const [statusFilter, setStatusFilter] = useState("todos");
   const [sort, setSort] = useState("recente");
   const [modalOpen, setModalOpen] = useState(false);
+  const [zapParserOpen, setZapParserOpen] = useState(false);
+  const [draft, setDraft] = useState<OrcamentoDraft | undefined>(undefined);
+
+  const handleDraftReady = (d: OrcamentoDraft) => {
+    setDraft(d);
+    setModalOpen(true);
+  };
 
   // Atualiza automaticamente orçamentos vencidos no banco (surgical update)
   useEffect(() => {
@@ -70,9 +78,15 @@ export default function Orcamentos() {
           <h1 className="text-2xl font-bold">Orçamentos</h1>
           <p className="text-sm text-muted-foreground">{orcamentos.length} orçamentos cadastrados</p>
         </div>
-        <Button onClick={() => setModalOpen(true)} className="gap-2">
-          <Plus className="h-4 w-4" /> Novo Orçamento
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setZapParserOpen(true)} className="gap-2 border-emerald-500/40 text-emerald-700 hover:bg-emerald-500/5 dark:text-emerald-400">
+            <MessageCircle className="h-4 w-4" />
+            <span className="hidden sm:inline">Zap → Orçamento</span>
+          </Button>
+          <Button onClick={() => { setDraft(undefined); setModalOpen(true); }} className="gap-2">
+            <Plus className="h-4 w-4" /> Novo Orçamento
+          </Button>
+        </div>
       </div>
 
       {/* M4: KPIs */}
@@ -174,7 +188,16 @@ export default function Orcamentos() {
       </div>
       )}
 
-      <OrcamentoModal open={modalOpen} onClose={() => setModalOpen(false)} />
+      <OrcamentoModal
+        open={modalOpen}
+        onClose={() => { setModalOpen(false); setDraft(undefined); }}
+        initialDraft={draft}
+      />
+      <WhatsAppParserModal
+        open={zapParserOpen}
+        onClose={() => setZapParserOpen(false)}
+        onDraftReady={handleDraftReady}
+      />
     </div>
   );
 }

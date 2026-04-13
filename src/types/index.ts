@@ -144,3 +144,13 @@ export interface OrcamentoItem {
   funcionario_id: string | null;
   criado_em: string;
 }
+
+/** Dados pré-preenchidos vindos do parser de WhatsApp */
+export interface OrcamentoDraft {
+  titulo?: string;
+  descricao?: string;
+  endereco_obra?: string;
+  clienteId?: string | null;
+  clienteNomeDetectado?: string;
+  items?: Partial<OrcamentoItem>[];
+}

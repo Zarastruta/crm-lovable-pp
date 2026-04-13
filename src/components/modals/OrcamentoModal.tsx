@@ -7,7 +7,7 @@ import {
   Search, PackageOpen, Users,
 } from "lucide-react";
 import { useApp } from "@/context/AppContext";
-import { Orcamento, StatusOrcamento, OrcamentoItem } from "@/types";
+import { Orcamento, StatusOrcamento, OrcamentoItem, OrcamentoDraft } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -70,9 +70,10 @@ interface Props {
   onClose: () => void;
   orcamento?: Orcamento;
   initialClienteId?: string;
+  initialDraft?: OrcamentoDraft;
 }
 
-export function OrcamentoModal({ open, onClose, orcamento, initialClienteId }: Props) {
+export function OrcamentoModal({ open, onClose, orcamento, initialClienteId, initialDraft }: Props) {
   const { addOrcamento, updateOrcamento, condominios, clientes, catalogoServicos, refreshAll } = useApp();
   const isEdit = !!orcamento;
   const [activeTab, setActiveTab] = useState<TabKey>("dados");
@@ -138,12 +139,18 @@ export function OrcamentoModal({ open, onClose, orcamento, initialClienteId }: P
         fetchItems(orcamento.id);
       } else {
         setForm({
-          titulo: "", descricao: "", status: "rascunho",
+          titulo: initialDraft?.titulo ?? "",
+          descricao: initialDraft?.descricao ?? "",
+          status: "rascunho",
           data_emissao: new Date(),
           validade: addDays(new Date(), 10),
           valor: 0,
-          observacoes: "", condominioId: null, clienteId: initialClienteId || null,
-          sindicoId: null, endereco_obra: "", motivo_recusa: "",
+          observacoes: "",
+          condominioId: null,
+          clienteId: initialDraft?.clienteId ?? initialClienteId ?? null,
+          sindicoId: null,
+          endereco_obra: initialDraft?.endereco_obra ?? "",
+          motivo_recusa: "",
           data_aprovacao: null,
           condicoes_pagamento: DEFAULT_CONDICOES,
           prazo_execucao: DEFAULT_PRAZO,
@@ -151,10 +158,14 @@ export function OrcamentoModal({ open, onClose, orcamento, initialClienteId }: P
           exclusoes: DEFAULT_EXCLUSOES,
           responsabilidades: DEFAULT_RESPONSABILIDADES,
         });
-        setItems([]);
+        setItems(initialDraft?.items ?? []);
+        // Se tem draft com clienteId, auto-vai para Passo 2 para o usuário ver os itens
+        if (initialDraft?.items && initialDraft.items.length > 0) {
+          setActiveTab("servicos");
+        }
       }
     }
-  }, [orcamento, open, initialClienteId]);
+  }, [orcamento, open, initialClienteId, initialDraft]);
 
   const fetchItems = async (orcID: string) => {
     const { data, error } = await supabase
@@ -201,25 +212,6 @@ export function OrcamentoModal({ open, onClose, orcamento, initialClienteId }: P
       updates.titulo = `Manutenção Predial - ${cond.nome}`;
     }
     setForm(prev => ({ ...prev, ...updates }));
-  };
-
-  // ─── Auto-Fill Teste (Prates Paiva) ──────────────────────────────────────
-  const fillTestPratesPaiva = () => {
-    setForm(prev => ({
-      ...prev,
-      titulo: "Reforma Cobertura Palmas (Patrícia)",
-      descricao: "Orçamento de serviços contendo retirada de parapeito, alvenaria, impermeabilizações e recolocação de peças conforme escopo em PDF.",
-      endereco_obra: "Residencial Costão de Palmas — SC",
-    }));
-    setActiveTab("servicos");
-    setItems([
-      { id: crypto.randomUUID(), servico_id: null, nome: "Retirada do parapeito de vidro e alumínio", unidade: "vb", quantidade: 1, valor_unitario: 0, custo_unitario: 0, funcionario_id: null },
-      { id: crypto.randomUUID(), servico_id: null, nome: "Retirada de pingadeiras de mármore", unidade: "m", quantidade: 90, valor_unitario: 0, custo_unitario: 0, funcionario_id: null },
-      { id: crypto.randomUUID(), servico_id: null, nome: "Reboco pelo lado interno do muro", unidade: "m²", quantidade: 1, valor_unitario: 0, custo_unitario: 0, funcionario_id: null },
-      { id: crypto.randomUUID(), servico_id: null, nome: "Acabamento e impermeabilização nas pingadeiras", unidade: "m", quantidade: 90, valor_unitario: 0, custo_unitario: 0, funcionario_id: null },
-      { id: crypto.randomUUID(), servico_id: null, nome: "MÃO DE OBRA TOTAL (Subtotal)", unidade: "vb", quantidade: 1, valor_unitario: 33000, custo_unitario: 0, funcionario_id: null },
-    ]);
-    toast.success("Dados de teste da Prates Paiva injetados com sucesso!");
   };
 
   // ─── Itens ────────────────────────────────────────────────────────────────
@@ -671,15 +663,6 @@ export function OrcamentoModal({ open, onClose, orcamento, initialClienteId }: P
                   >
                     <Plus className="h-4 w-4" />
                     <span className="hidden sm:inline">Item Avulso</span>
-                  </Button>
-
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={fillTestPratesPaiva}
-                    className="h-12 font-oswald uppercase font-bold text-xs gap-1.5 shrink-0 px-3 bg-purple-100 text-purple-700 hover:bg-purple-200"
-                  >
-                    <span>⚡ Auto-Preencher Teste</span>
                   </Button>
                 </div>
 
