@@ -445,7 +445,6 @@ export type Database = {
           nota_fiscal_hora: string | null
           observacoes: string
           sindico_id: string | null
-          status_obra: string
           status_pagamento: string
           titulo: string
           valor: number
@@ -465,7 +464,6 @@ export type Database = {
           nota_fiscal_hora?: string | null
           observacoes?: string
           sindico_id?: string | null
-          status_obra?: string
           status_pagamento?: string
           titulo: string
           valor?: number
@@ -485,7 +483,6 @@ export type Database = {
           nota_fiscal_hora?: string | null
           observacoes?: string
           sindico_id?: string | null
-          status_obra?: string
           status_pagamento?: string
           titulo?: string
           valor?: number
