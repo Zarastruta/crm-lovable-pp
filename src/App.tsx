@@ -37,17 +37,11 @@ function PageLoader() {
 }
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
-  const { isLoggedIn, loading } = useApp();
-  if (loading) return <PageLoader />;
-  if (!isLoggedIn) return <Navigate to="/login" replace />;
   return <>{children}</>;
 }
 
 function LoginGuard({ children }: { children: React.ReactNode }) {
-  const { isLoggedIn, loading } = useApp();
-  if (loading) return <PageLoader />;
-  if (isLoggedIn) return <Navigate to="/" replace />;
-  return <>{children}</>;
+  return <Navigate to="/" replace />;
 }
 
 function AppRoutes() {

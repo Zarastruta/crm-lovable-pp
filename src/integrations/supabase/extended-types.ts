@@ -21,16 +21,19 @@ export type ExtendedDatabase = Database & {
           conclusao_percentual: number | null;
           etapa_atual: string | null;
           custo_estimado: number | null;
+          status_obra?: string | null;
         };
         Insert: Database["public"]["Tables"]["trabalhos"]["Insert"] & {
           conclusao_percentual?: number | null;
           etapa_atual?: string | null;
           custo_estimado?: number | null;
+          status_obra?: string | null;
         };
         Update: Database["public"]["Tables"]["trabalhos"]["Update"] & {
           conclusao_percentual?: number | null;
           etapa_atual?: string | null;
           custo_estimado?: number | null;
+          status_obra?: string | null;
         };
         Relationships: Database["public"]["Tables"]["trabalhos"]["Relationships"];
       };
