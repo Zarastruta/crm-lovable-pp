@@ -31,7 +31,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { addDays } from "date-fns";
 import { ContatoModal } from "./ContatoModal";
-import { CondominioModal } from "./CondominioModal";
+import { LocalModal } from "./LocalModal";
 
 const DEFAULT_CONDICOES = "Entrada de 50% na aprovação e 50% na conclusão dos serviços.";
 const DEFAULT_PRAZO = "Aproximadamente 15 dias úteis após a aprovação e liberação do local.";
@@ -74,7 +74,7 @@ interface Props {
 }
 
 export function OrcamentoModal({ open, onClose, orcamento, initialClienteId, initialDraft }: Props) {
-  const { addOrcamento, updateOrcamento, condominios, clientes, catalogoServicos, refreshAll } = useApp();
+  const { addOrcamento, updateOrcamento, locais, clientes, catalogoServicos, refreshAll } = useApp();
   const isEdit = !!orcamento;
   const [activeTab, setActiveTab] = useState<TabKey>("dados");
 
@@ -97,6 +97,13 @@ export function OrcamentoModal({ open, onClose, orcamento, initialClienteId, ini
     data_prevista_inicio: null as Date | null,
     exclusoes: "",
     responsabilidades: "",
+    // Custos adicionais metalurgia
+    ca_mao_obra: 0,
+    ca_galvanizacao: 0,
+    ca_pintura: 0,
+    ca_transporte: 0,
+    ca_outros: 0,
+    margem_lucro: 0,
   });
 
   const [items, setItems] = useState<Partial<OrcamentoItem>[]>([]);
@@ -135,6 +142,7 @@ export function OrcamentoModal({ open, onClose, orcamento, initialClienteId, ini
           data_prevista_inicio: orcamento.data_prevista_inicio ? new Date(orcamento.data_prevista_inicio + "T12:00:00") : null,
           exclusoes: orcamento.exclusoes || "",
           responsabilidades: orcamento.responsabilidades || "",
+          ca_mao_obra: 0, ca_galvanizacao: 0, ca_pintura: 0, ca_transporte: 0, ca_outros: 0, margem_lucro: 0,
         });
         fetchItems(orcamento.id);
       } else {
@@ -157,6 +165,7 @@ export function OrcamentoModal({ open, onClose, orcamento, initialClienteId, ini
           data_prevista_inicio: addDays(new Date(), 7),
           exclusoes: DEFAULT_EXCLUSOES,
           responsabilidades: DEFAULT_RESPONSABILIDADES,
+          ca_mao_obra: 0, ca_galvanizacao: 0, ca_pintura: 0, ca_transporte: 0, ca_outros: 0, margem_lucro: 0,
         });
         setItems(initialDraft?.items ?? []);
         // Se tem draft com clienteId, auto-vai para Passo 2 para o usuário ver os itens
@@ -197,19 +206,17 @@ export function OrcamentoModal({ open, onClose, orcamento, initialClienteId, ini
   };
 
   const handleCondominioChange = (v: string) => {
-    const cond = condominios.find(c => c.id === v);
+    const local = locais.find(l => l.id === v);
     const updates: Partial<typeof form> = {
       condominioId: v === "_none" ? null : v,
       sindicoId: clienteTipo !== "sindico" ? null : form.sindicoId,
     };
-    // Auto-preenche endereço se estiver vazio
-    if (cond?.endereco && !form.endereco_obra) {
-      updates.endereco_obra = cond.endereco;
+    if (local?.endereco && !form.endereco_obra) {
+      updates.endereco_obra = local.endereco;
     }
-    // M2: Auto-refina o título se condomínio selecionado
     const clienteAtual = clientes.find(c => c.id === form.clienteId);
-    if (cond && (form.titulo === "" || form.titulo === `Proposta de Serviços - ${clienteAtual?.nome || ''}` )) {
-      updates.titulo = `Manutenção Predial - ${cond.nome}`;
+    if (local && (form.titulo === "" || form.titulo === `Proposta de Serviços - ${clienteAtual?.nome || ''}`)) {
+      updates.titulo = `Serviço - ${local.nome}`;
     }
     setForm(prev => ({ ...prev, ...updates }));
   };
@@ -258,16 +265,24 @@ export function OrcamentoModal({ open, onClose, orcamento, initialClienteId, ini
   };
 
   // ─── Totais ───────────────────────────────────────────────────────────────
-  // Usa || 1 consistentemente em ambos os lugares
-  const totalVenda = items.reduce((acc, it) => acc + ((it.valor_unitario || 0) * (it.quantidade || 1)), 0);
+  const totalItens = items.reduce((acc, it) => acc + ((it.valor_unitario || 0) * (it.quantidade || 1)), 0);
+  const totalVenda = totalItens; // alias mantido para compatibilidade interna
   const totalCusto = items.reduce((acc, it) => acc + ((it.custo_unitario || 0) * (it.quantidade || 1)), 0);
-  const lucro = totalVenda - totalCusto;
-  const margemPercentual = totalVenda > 0 ? (lucro / totalVenda) * 100 : 0;
 
-  // Auto-sync valor com itens (sempre, sem condicional)
+  const somaCustosAdicionais =
+    form.ca_mao_obra + form.ca_galvanizacao + form.ca_pintura + form.ca_transporte + form.ca_outros;
+  const subtotal = totalItens + somaCustosAdicionais;
+  const valorFinal = form.margem_lucro > 0 && form.margem_lucro < 100
+    ? subtotal / (1 - form.margem_lucro / 100)
+    : subtotal;
+
+  const lucro = valorFinal - totalCusto - somaCustosAdicionais;
+  const margemPercentual = valorFinal > 0 ? (lucro / valorFinal) * 100 : 0;
+
+  // Auto-sync valor com valorFinal
   useEffect(() => {
-    setForm(prev => ({ ...prev, valor: totalVenda }));
-  }, [totalVenda]);
+    setForm(prev => ({ ...prev, valor: parseFloat(valorFinal.toFixed(2)) }));
+  }, [valorFinal]);
 
   // ─── Submit ───────────────────────────────────────────────────────────────
   const handleSubmit = async () => {
@@ -482,23 +497,23 @@ export function OrcamentoModal({ open, onClose, orcamento, initialClienteId, ini
                     </Select>
                   </div>
 
-                  {/* 2. Condomínio — apenas se síndico ou administradora */}
+                  {/* 2. Local — apenas se síndico ou administradora */}
                   {precisaCondominio && (
                     <div className="space-y-1.5 animate-in fade-in duration-200">
                       <div className="flex items-center justify-between">
                         <Label className="text-xs font-barlow font-bold flex items-center gap-1.5">
                           <Building2 className="h-3 w-3 text-primary" />
-                          Condomínio
+                          Local
                         </Label>
-                        <Button type="button" variant="ghost" size="icon" className="h-8 w-8 bg-primary/10 hover:bg-primary/20" onClick={() => setNewCondominioModalOpen(true)} title="Novo Condomínio">
+                        <Button type="button" variant="ghost" size="icon" className="h-8 w-8 bg-primary/10 hover:bg-primary/20" onClick={() => setNewCondominioModalOpen(true)} title="Novo Local">
                           <Plus className="h-4 w-4 text-primary" />
                         </Button>
                       </div>
                       <Select value={form.condominioId ?? "_none"} onValueChange={handleCondominioChange}>
-                        <SelectTrigger className="h-12"><SelectValue placeholder="Selecionar Condomínio..." /></SelectTrigger>
+                        <SelectTrigger className="h-12"><SelectValue placeholder="Selecionar Local..." /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="_none">Nenhum</SelectItem>
-                          {condominios.map((c) => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}
+                          {locais.map((l) => <SelectItem key={l.id} value={l.id}>{l.nome}</SelectItem>)}
                         </SelectContent>
                       </Select>
                     </div>
@@ -809,6 +824,62 @@ export function OrcamentoModal({ open, onClose, orcamento, initialClienteId, ini
                   </div>
                 )}
 
+                {/* Custos Adicionais */}
+                <div className="rounded-xl border border-border bg-muted/20 overflow-hidden">
+                  <div className="px-4 py-3 bg-muted/40 border-b border-border">
+                    <p className="text-[10px] font-bold font-oswald uppercase tracking-widest text-muted-foreground">Custos Adicionais</p>
+                    <p className="text-[10px] text-muted-foreground font-barlow">Mão de obra, galvanização, pintura e outros custos de produção.</p>
+                  </div>
+                  <div className="p-4 space-y-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      {([
+                        { key: "ca_mao_obra",     label: "Mão de Obra (R$)" },
+                        { key: "ca_galvanizacao",  label: "Galvanização (R$)" },
+                        { key: "ca_pintura",       label: "Pintura / Jateamento (R$)" },
+                        { key: "ca_transporte",    label: "Transporte / Instalação (R$)" },
+                        { key: "ca_outros",        label: "Outros (R$)" },
+                      ] as const).map(({ key, label }) => (
+                        <div key={key} className="space-y-1">
+                          <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground font-barlow">{label}</p>
+                          <CurrencyInput
+                            value={form[key]}
+                            onChange={(v) => setForm(prev => ({ ...prev, [key]: v }))}
+                            className="h-10"
+                          />
+                        </div>
+                      ))}
+                      <div className="space-y-1">
+                        <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground font-barlow">Margem de Lucro (%)</p>
+                        <input
+                          type="number" min={0} max={99} step={1}
+                          value={form.margem_lucro}
+                          onChange={(e) => setForm(prev => ({ ...prev, margem_lucro: Number(e.target.value) }))}
+                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm font-oswald font-bold text-center ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        />
+                      </div>
+                    </div>
+                    {somaCustosAdicionais > 0 || form.margem_lucro > 0 ? (
+                      <div className="mt-2 bg-card rounded-lg border border-border p-3 space-y-1.5 text-xs font-barlow">
+                        <div className="flex justify-between text-muted-foreground">
+                          <span>Itens</span><span className="font-bold">{fmt(totalItens)}</span>
+                        </div>
+                        <div className="flex justify-between text-muted-foreground">
+                          <span>Custos adicionais</span><span className="font-bold">{fmt(somaCustosAdicionais)}</span>
+                        </div>
+                        <div className="flex justify-between text-muted-foreground">
+                          <span>Subtotal</span><span className="font-bold">{fmt(subtotal)}</span>
+                        </div>
+                        {form.margem_lucro > 0 && (
+                          <div className="flex justify-between text-primary font-bold border-t border-border pt-1.5">
+                            <span>Valor Final (c/ {form.margem_lucro}% margem)</span>
+                            <span>{fmt(valorFinal)}</span>
+                          </div>
+                        )}
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+
                 {/* Totais consolidados */}
                 {items.length > 0 && (
                   <div className="grid grid-cols-3 gap-3 px-4 py-4 bg-muted/20 rounded-2xl border border-border/50 mt-2">
@@ -817,8 +888,8 @@ export function OrcamentoModal({ open, onClose, orcamento, initialClienteId, ini
                       <p className="font-oswald text-lg font-bold text-destructive/70">{fmt(totalCusto)}</p>
                     </div>
                     <div className="space-y-0.5 text-center border-x border-border/50">
-                      <p className="text-[9px] uppercase tracking-[0.2em] text-emerald-700 font-bold font-barlow">Total de Venda</p>
-                      <p className="font-oswald text-lg font-bold text-emerald-600">{fmt(totalVenda)}</p>
+                      <p className="text-[9px] uppercase tracking-[0.2em] text-emerald-700 font-bold font-barlow">Valor Final</p>
+                      <p className="font-oswald text-lg font-bold text-emerald-600">{fmt(valorFinal)}</p>
                     </div>
                     <div className="space-y-0.5 text-center">
                       <p className="text-[9px] uppercase tracking-[0.2em] text-primary font-bold font-barlow">
@@ -970,7 +1041,7 @@ export function OrcamentoModal({ open, onClose, orcamento, initialClienteId, ini
               <TabsContent value="clausulas" className="m-0 space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
                 <div className="pb-4 border-b border-border/50">
                   <h2 className="text-xl font-bold font-oswald uppercase text-primary flex items-center gap-2">
-                    <Tag className="h-5 w-5" /> 4. A Segurança: Blindagem PratesPaiva
+                    <Tag className="h-5 w-5" /> 4. A Segurança: Blindagem Vulcano
                   </h2>
                   <p className="text-sm text-muted-foreground font-barlow italic">O que NÃO está incluso e quais as responsabilidades do cliente.</p>
                 </div>
@@ -998,7 +1069,7 @@ export function OrcamentoModal({ open, onClose, orcamento, initialClienteId, ini
                         rows={3}
                         className="font-barlow"
                       />
-                      <p className="text-[10px] text-muted-foreground">Protege a PratesPaiva contra expectativas irreais do cliente.</p>
+                      <p className="text-[10px] text-muted-foreground">Protege a Vulcano contra expectativas irreais do cliente.</p>
                     </div>
                   </details>
 
@@ -1053,7 +1124,7 @@ export function OrcamentoModal({ open, onClose, orcamento, initialClienteId, ini
                     <ReviewRow label="Título" value={form.titulo || "—"} highlight />
                     <ReviewRow label="Endereço da Obra" value={form.endereco_obra || "—"} />
                     {form.clienteId && <ReviewRow label="Cliente" value={clientes.find(c => c.id === form.clienteId)?.nome ?? "—"} />}
-                    {form.condominioId && <ReviewRow label="Condomínio" value={condominios.find(c => c.id === form.condominioId)?.nome ?? "—"} />}
+                    {form.condominioId && <ReviewRow label="Local" value={locais.find(l => l.id === form.condominioId)?.nome ?? "—"} />}
                     {form.descricao && <ReviewRow label="Descrição" value={form.descricao} wrap className="col-span-2" />}
                   </div>
                 </ReviewBlock>
@@ -1239,7 +1310,7 @@ export function OrcamentoModal({ open, onClose, orcamento, initialClienteId, ini
       </DialogContent>
 
       <ContatoModal open={newClientModalOpen} onClose={() => setNewClientModalOpen(false)} />
-      <CondominioModal open={newCondominioModalOpen} onClose={() => setNewCondominioModalOpen(false)} />
+      <LocalModal open={newCondominioModalOpen} onClose={() => setNewCondominioModalOpen(false)} />
     </Dialog>
   );
 }

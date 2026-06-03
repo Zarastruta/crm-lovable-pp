@@ -42,11 +42,11 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       items: [
         { to: "/", icon: LayoutDashboard, label: "Dashboard", badge: 0 },
         { to: "/clientes", icon: Users, label: "Clientes", badge: 0 },
-        { to: "/trabalhos", icon: Wrench, label: "Trabalhos", badge: 0 },
+        { to: "/os", icon: Wrench, label: "Ordens de Serviço", badge: 0 },
         { to: "/ferramentas", icon: Hammer, label: "Ferramentas", badge: 0 },
         { to: "/equipe", icon: Users, label: "Equipe", badge: 0 },
         { to: "/ponto", icon: ClipboardList, label: "Ponto Diário", badge: 0 },
-        { to: "/condominios", icon: Building2, label: "Condomínios", badge: 0 },
+        { to: "/locais", icon: Building2, label: "Locais", badge: 0 },
       ]
     },
     {
@@ -77,10 +77,10 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       >
         <div className="flex items-center justify-between px-5 py-5 border-b border-white/10">
           <div className="flex items-center gap-2.5">
-            <img src={iconImg} alt="PratesPaiva" className="h-8 w-8 brightness-0 invert" />
+            <img src={iconImg} alt="Vulcano" className="h-8 w-8 brightness-0 invert" />
             <div>
-              <p className="text-sm font-bold text-white leading-none">PratesPaiva</p>
-              <p className="text-2xs text-white/50 mt-0.5">Construções e Reformas</p>
+              <p className="text-sm font-bold text-white leading-none">Vulcano</p>
+              <p className="text-2xs text-white/50 mt-0.5">Serralheria Metálica</p>
             </div>
           </div>
           <button

@@ -1,9 +1,13 @@
-export type TipoContato = "sindico" | "pessoa_fisica" | "empresa" | "administradora";
+export type TipoContato = "pessoa_fisica" | "empresa" | "construtora" | "engenheiro" | "arquiteto" | "sindico" | "administradora";
 export type StatusPagamento = "pago" | "nao_pago";
 export type StatusOrcamento = "rascunho" | "enviado" | "aprovado" | "recusado" | "vencido" | "convertido";
-export type StatusObra = "aguardando" | "em_andamento" | "concluido" | "cancelado";
+export const OS_STATUSES = [
+  "Novo", "Medição", "Projeto", "Compras",
+  "Fabricação", "Galvanização", "Pintura", "Instalação", "Finalizado"
+] as const;
+export type StatusObra = typeof OS_STATUSES[number];
 export type TipoFuncionario = "proprio" | "terceirizado";
-export type TipoServico = "preventivo" | "corretivo" | "emergencial";
+export type TipoServico = "fabricacao" | "instalacao" | "manutencao" | "reforma" | "emergencial";
 export type NivelDificuldade = "facil" | "medio" | "dificil";
 
 export interface Cliente {
@@ -17,13 +21,11 @@ export interface Cliente {
   criadoEm: string;
 }
 
-export interface Condominio {
+export interface Local {
   id: string;
   nome: string;
-  cnpj: string;
   endereco: string;
-  sindicoId: string | null;
-  administradoraId: string | null;
+  tipo_local: "residencial" | "comercial" | "industrial" | "obra";
   observacoes: string;
   criadoEm: string;
 }
@@ -39,12 +41,19 @@ export interface Funcionario {
 
 export interface Trabalho {
   id: string;
+  codigo: string;
   titulo: string;
   descricao: string;
   data: string;
   valor: number;
   status_pagamento: StatusPagamento;
+  status_pagamento_detalhado: "pendente" | "parcial" | "pago";
+  valor_pago: number;
   status_obra: StatusObra;
+  prioridade: "Baixa" | "Média" | "Alta" | "Crítica";
+  prazo: string | null;
+  responsavel_id: string | null;
+  compras_pendentes: boolean;
   nota_fiscal: string;
   nota_fiscal_data: string | null;
   nota_fiscal_hora: string | null;
@@ -55,7 +64,7 @@ export interface Trabalho {
   sindicoId: string | null;
   endereco_obra: string;
   observacoes: string;
-  conclusao_percentual: number; // 0-100
+  conclusao_percentual: number;
   etapa_atual: string;
   custo_estimado: number;
   criadoEm: string;
@@ -106,7 +115,9 @@ export interface CatalogoServico {
   custo_material: number;
   custo_mao_obra: number;
   custo_deslocamento: number;
-  custo_extras: number;
+  custo_galvanizacao: number;
+  custo_pintura: number;
+  custo_corte_dobra: number;
   margem_desejada: number;
   // Classificação
   prestador_padrao_id: string | null;

@@ -32,8 +32,8 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="w-full max-w-sm">
         <div className="flex flex-col items-center mb-8">
-          <img src={iconImg} alt="PratesPaiva" className="h-14 w-14 mb-3" />
-          <p className="text-sm text-muted-foreground mt-1">Gestão Interna de Manutenção Predial</p>
+          <img src={iconImg} alt="Vulcano" className="h-14 w-14 mb-3" />
+          <p className="text-sm text-muted-foreground mt-1">Vulcano Serralheria Metálica</p>
         </div>
 
         <div className="bg-card rounded-xl border border-border p-6 shadow-card">

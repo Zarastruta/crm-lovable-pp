@@ -12,7 +12,7 @@ import { ContatoModal } from "@/components/modals/ContatoModal";
 export default function ContatoDetalhe() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { clientes: contatos, condominios, trabalhos, orcamentos, deleteCliente: deleteContato } = useApp();
+  const { clientes: contatos, locais, trabalhos, orcamentos, deleteCliente: deleteContato } = useApp();
   const [editOpen, setEditOpen] = useState(false);
   const [orcamentoOpen, setOrcamentoOpen] = useState(false);
 
@@ -26,7 +26,7 @@ export default function ContatoDetalhe() {
     );
   }
 
-  const contatoCondominios = condominios.filter((c) => c.sindicoId === id || c.administradoraId === id);
+  const contatoCondominios = locais.filter((_l) => false);
   const contatoTrabalhos = trabalhos.filter((t) => t.clienteId === id || t.sindicoId === id);
   const contatoOrcamentos = orcamentos.filter((o) => o.clienteId === id || o.sindicoId === id);
   
@@ -100,7 +100,7 @@ export default function ContatoDetalhe() {
             {contatoCondominios.map((c) => (
               <li
                 key={c.id}
-                onClick={() => navigate(`/condominios/${c.id}`)}
+                onClick={() => navigate(`/locais/${c.id}`)}
                 className="flex items-center gap-3 px-5 py-3 hover:bg-muted/40 cursor-pointer"
               >
                 <div className="flex-1 min-w-0">
@@ -126,7 +126,7 @@ export default function ContatoDetalhe() {
             {contatoTrabalhos.map((t) => (
               <li
                 key={t.id}
-                onClick={() => navigate(`/trabalhos/${t.id}`)}
+                onClick={() => navigate(`/os/${t.id}`)}
                 className="flex items-center gap-3 px-5 py-3 hover:bg-muted/40 cursor-pointer"
               >
                 <div className="flex-1 min-w-0">

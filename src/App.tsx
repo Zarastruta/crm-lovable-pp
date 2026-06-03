@@ -15,8 +15,8 @@ const Trabalhos = lazy(() => import("@/pages/Trabalhos"));
 const TrabalhoDetalhe = lazy(() => import("@/pages/TrabalhoDetalhe"));
 const Orcamentos = lazy(() => import("@/pages/Orcamentos"));
 const OrcamentoDetalhe = lazy(() => import("@/pages/OrcamentoDetalhe"));
-const Condominios = lazy(() => import("@/pages/Condominios"));
-const CondominioDetalhe = lazy(() => import("@/pages/CondominioDetalhe"));
+const Locais = lazy(() => import("@/pages/Locais"));
+const LocalDetalhe = lazy(() => import("@/pages/LocalDetalhe"));
 const Clientes = lazy(() => import("@/pages/Clientes"));
 const ClienteDetalhe = lazy(() => import("@/pages/ContatoDetalhe"));
 const Financeiro = lazy(() => import("@/pages/Financeiro"));
@@ -51,12 +51,12 @@ function AppRoutes() {
         <Route path="/login" element={<LoginGuard><Login /></LoginGuard>} />
         <Route element={<AuthGuard><Layout /></AuthGuard>}>
           <Route path="/" element={<Dashboard />} />
-          <Route path="/trabalhos" element={<Trabalhos />} />
-          <Route path="/trabalhos/:id" element={<TrabalhoDetalhe />} />
+          <Route path="/os" element={<Trabalhos />} />
+          <Route path="/os/:id" element={<TrabalhoDetalhe />} />
           <Route path="/orcamentos" element={<Orcamentos />} />
           <Route path="/orcamentos/:id" element={<OrcamentoDetalhe />} />
-          <Route path="/condominios" element={<Condominios />} />
-          <Route path="/condominios/:id" element={<CondominioDetalhe />} />
+          <Route path="/locais" element={<Locais />} />
+          <Route path="/locais/:id" element={<LocalDetalhe />} />
           <Route path="/clientes" element={<Clientes />} />
           <Route path="/clientes/:id" element={<ClienteDetalhe />} />
           <Route path="/financeiro" element={<Financeiro />} />

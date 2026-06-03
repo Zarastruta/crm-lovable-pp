@@ -1,8 +1,8 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { Orcamento, Cliente, Condominio, OrcamentoItem } from "@/types";
-import logoPratesPaiva from "@/assets/logo-pratespaiva.png";
+import { Orcamento, Cliente, Local, OrcamentoItem } from "@/types";
+import logoVulcano from "@/assets/logo-pratespaiva.png";
 import { 
   Oswald_Medium_B64, 
   Oswald_Regular_B64, 
@@ -20,7 +20,7 @@ export const generateOrcamentoPdf = (
   orcamento: Orcamento,
   items: OrcamentoItem[],
   cliente?: Cliente,
-  condominio?: Condominio,
+  condominio?: Local,
   ocultarUnitarios: boolean = false,
   sindico?: Cliente
 ) => {
@@ -85,7 +85,7 @@ export const generateOrcamentoPdf = (
   const pageWidth = doc.internal.pageSize.getWidth();
   const marginLeft = 20;
 
-  // Paleta PratesPaiva Oficial
+  // Paleta Vulcano Oficial
   const COLORS = {
     GRAFITE: "#2E2F2F",
     AZUL: "#3F8FBE",
@@ -101,16 +101,16 @@ export const generateOrcamentoPdf = (
   doc.setFillColor(COLORS.BRANCO); 
   doc.rect(0, 0, pageWidth, 40, 'F');
   
-  // Linha de acento inferior em Azul PratesPaiva
+  // Linha de acento inferior em Azul Vulcano
   doc.setDrawColor(COLORS.AZUL);
   doc.setLineWidth(0.8);
   doc.line(0, 40, pageWidth, 40); 
   
-  // Logotipo Oficial PratesPaiva - Horizontal à Esquerda (Versão Limpa)
+  // Logotipo Oficial Vulcano - Horizontal à Esquerda (Versão Limpa)
   try {
     const logoWidth = 71; 
     const logoHeight = 18;
-    doc.addImage(logoPratesPaiva, 'PNG', marginLeft, 10, logoWidth, logoHeight);
+    doc.addImage(logoVulcano, 'PNG', marginLeft, 10, logoWidth, logoHeight);
   } catch (err) {
     console.error("Erro ao carregar logo no PDF:", err);
     doc.setTextColor(COLORS.GRAFITE);
@@ -334,7 +334,7 @@ export const generateOrcamentoPdf = (
     doc.setFontSize(7);
     doc.setTextColor(COLORS.CONCRETO);
     doc.setFont("Barlow", "normal");
-    const footerText = `Documento gerado por PratesPaiva Hub CRM • Proposta ${orcamento.id.substring(0,6).toUpperCase()} • Página ${i} de ${pageCount}`;
+    const footerText = `Documento gerado por Vulcano Hub CRM • Proposta ${orcamento.id.substring(0,6).toUpperCase()} • Página ${i} de ${pageCount}`;
     doc.text(footerText, pageWidth / 2, 287, { align: 'center' });
   }
   

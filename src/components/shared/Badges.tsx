@@ -69,9 +69,12 @@ export function PagamentoBadge({ status }: { status: StatusPagamento }) {
  * Badge de Tipo de Contato/Cliente
  */
 const tipoContatoMap: Record<TipoContato, { label: string; cls: string }> = {
-  sindico: { label: "Síndico", cls: "bg-amber-50 text-amber-700 border-amber-100" },
-  pessoa_fisica: { label: "Pessoa Física", cls: "bg-blue-50 text-blue-700 border-blue-100" },
-  empresa: { label: "Empresa", cls: "bg-indigo-50 text-indigo-700 border-indigo-100" },
+  pessoa_fisica:  { label: "Pessoa Física",  cls: "bg-blue-50 text-blue-700 border-blue-100" },
+  empresa:        { label: "Empresa",        cls: "bg-indigo-50 text-indigo-700 border-indigo-100" },
+  construtora:    { label: "Construtora",    cls: "bg-orange-50 text-orange-700 border-orange-100" },
+  engenheiro:     { label: "Engenheiro",     cls: "bg-cyan-50 text-cyan-700 border-cyan-100" },
+  arquiteto:      { label: "Arquiteto",      cls: "bg-violet-50 text-violet-700 border-violet-100" },
+  sindico:        { label: "Síndico",        cls: "bg-amber-50 text-amber-700 border-amber-100" },
   administradora: { label: "Administradora", cls: "bg-slate-50 text-slate-700 border-slate-100" },
 };
 
@@ -101,10 +104,15 @@ export function OrcamentoStatusBadge({ status }: { status: StatusOrcamento }) {
  * Badge de Status de Obra/Trabalho
  */
 const obraStatusMap: Record<StatusObra, { label: string; cls: string; icon: string }> = {
-  aguardando:   { label: "Aguardando",   cls: "bg-slate-50 text-slate-700 border-slate-100",  icon: "🕐" },
-  em_andamento: { label: "Em Andamento", cls: "bg-blue-50 text-blue-700 border-blue-100",    icon: "🔧" },
-  concluido:    { label: "Concluído",    cls: "bg-emerald-50 text-emerald-700 border-emerald-100", icon: "✅" },
-  cancelado:    { label: "Cancelado",    cls: "bg-rose-50 text-rose-700 border-rose-100",   icon: "❌" },
+  "Novo":         { label: "Novo",         cls: "bg-zinc-50 text-zinc-700 border-zinc-200",         icon: "🆕" },
+  "Medição":      { label: "Medição",      cls: "bg-sky-50 text-sky-700 border-sky-100",            icon: "📐" },
+  "Projeto":      { label: "Projeto",      cls: "bg-violet-50 text-violet-700 border-violet-100",   icon: "📋" },
+  "Compras":      { label: "Compras",      cls: "bg-yellow-50 text-yellow-700 border-yellow-100",   icon: "🛒" },
+  "Fabricação":   { label: "Fabricação",   cls: "bg-orange-50 text-orange-700 border-orange-100",   icon: "🔨" },
+  "Galvanização": { label: "Galvanização", cls: "bg-slate-50 text-slate-700 border-slate-200",      icon: "⚙️" },
+  "Pintura":      { label: "Pintura",      cls: "bg-fuchsia-50 text-fuchsia-700 border-fuchsia-100",icon: "🎨" },
+  "Instalação":   { label: "Instalação",   cls: "bg-blue-50 text-blue-700 border-blue-100",         icon: "🔩" },
+  "Finalizado":   { label: "Finalizado",   cls: "bg-emerald-50 text-emerald-700 border-emerald-100",icon: "✅" },
 };
 
 export function ObraStatusBadge({ status }: { status: StatusObra }) {

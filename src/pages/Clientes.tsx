@@ -10,7 +10,7 @@ import { SkeletonList } from "@/components/shared/SkeletonCard";
 import { supabase } from "@/integrations/supabase/client";
 
 export default function Clientes() {
-  const { orcamentos, condominios, clientes, trabalhos, dataLoading } = useApp();
+  const { orcamentos, clientes, trabalhos, dataLoading } = useApp();
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [modalOpen, setModalOpen] = useState(false);

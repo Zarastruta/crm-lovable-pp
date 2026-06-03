@@ -2,7 +2,7 @@ import { createContext, useContext } from "react";
 import { User } from "@supabase/supabase-js";
 import { ExtendedDatabase } from "@/integrations/supabase/extended-types";
 import {
-  Cliente, Condominio, Trabalho, Orcamento, Funcionario, Ferramenta,
+  Cliente, Local, Trabalho, Orcamento, Funcionario, Ferramenta,
   TipoContato, StatusPagamento, StatusOrcamento, StatusObra, TipoFuncionario,
   CatalogoServico, OrcamentoItem, PontoDiario
 } from "@/types";
@@ -30,16 +30,15 @@ export function mapCliente(row: ClienteRow): Cliente {
   };
 }
 
-export function mapCondominio(row: CondominioRow): Condominio {
+export function mapLocal(row: CondominioRow): Local {
+  const r = row as CondominioRow & { tipo_local?: string | null };
   return {
-    id: row.id,
-    nome: row.nome,
-    cnpj: row.cnpj,
-    endereco: row.endereco,
-    sindicoId: row.sindico_id,
-    administradoraId: row.administradora_id,
-    observacoes: row.observacoes,
-    criadoEm: row.criado_em,
+    id: r.id,
+    nome: r.nome,
+    endereco: r.endereco,
+    tipo_local: (r.tipo_local ?? "comercial") as Local["tipo_local"],
+    observacoes: r.observacoes,
+    criadoEm: r.criado_em,
   };
 }
 
@@ -202,11 +201,11 @@ export interface AppContextType {
   deleteCliente: (id: string) => Promise<boolean>;
   refreshClientes: () => Promise<void>;
 
-  condominios: Condominio[];
-  addCondominio: (c: Omit<Condominio, "id" | "criadoEm">) => Promise<string | false>;
-  updateCondominio: (id: string, c: Partial<Condominio>) => Promise<boolean>;
-  deleteCondominio: (id: string) => Promise<boolean>;
-  refreshCondominios: () => Promise<void>;
+  locais: Local[];
+  addLocal: (c: Omit<Local, "id" | "criadoEm">) => Promise<string | false>;
+  updateLocal: (id: string, c: Partial<Local>) => Promise<boolean>;
+  deleteLocal: (id: string) => Promise<boolean>;
+  refreshLocais: () => Promise<void>;
 
   trabalhos: Trabalho[];
   addTrabalho: (t: Omit<Trabalho, "id" | "criadoEm">) => Promise<string | false>;

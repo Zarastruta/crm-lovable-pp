@@ -14,7 +14,7 @@ interface BuscaGlobalModalProps {
 
 export function BuscaGlobalModal({ open, onClose }: BuscaGlobalModalProps) {
   const navigate = useNavigate();
-  const { trabalhos, orcamentos, clientes, condominios } = useApp();
+  const { trabalhos, orcamentos, clientes, locais } = useApp();
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -70,21 +70,21 @@ export function BuscaGlobalModal({ open, onClose }: BuscaGlobalModalProps) {
         })
       );
 
-    condominios
-      .filter((c) => c.nome.toLowerCase().includes(q))
+    locais
+      .filter((l) => l.nome.toLowerCase().includes(q))
       .slice(0, 3)
-      .forEach((c) =>
+      .forEach((l) =>
         items.push({
-          type: "Condomínio",
-          label: c.nome,
-          sub: c.endereco || "",
-          href: `/condominios/${c.id}`,
+          type: "Local",
+          label: l.nome,
+          sub: l.endereco || "",
+          href: `/locais/${l.id}`,
           icon: Building2,
         })
       );
 
     return items;
-  }, [query, trabalhos, orcamentos, clientes, condominios]);
+  }, [query, trabalhos, orcamentos, clientes, locais]);
 
   const handleSelect = (href: string) => {
     navigate(href);

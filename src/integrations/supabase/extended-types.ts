@@ -4,15 +4,33 @@ import { Database } from "./types";
 export type ExtendedDatabase = Database & {
   public: Database["public"] & {
     Tables: Database["public"]["Tables"] & {
+      condominios: {
+        Row: Database["public"]["Tables"]["condominios"]["Row"] & {
+          tipo_local: string | null;
+          user_id: string | null;
+        };
+        Insert: Database["public"]["Tables"]["condominios"]["Insert"] & {
+          tipo_local?: string | null;
+          user_id?: string | null;
+        };
+        Update: Database["public"]["Tables"]["condominios"]["Update"] & {
+          tipo_local?: string | null;
+          user_id?: string | null;
+        };
+        Relationships: Database["public"]["Tables"]["condominios"]["Relationships"];
+      };
       clientes: {
         Row: Database["public"]["Tables"]["clientes"]["Row"] & {
           cpf_cnpj: string | null;
+          user_id: string | null;
         };
         Insert: Database["public"]["Tables"]["clientes"]["Insert"] & {
           cpf_cnpj?: string | null;
+          user_id?: string | null;
         };
         Update: Database["public"]["Tables"]["clientes"]["Update"] & {
           cpf_cnpj?: string | null;
+          user_id?: string | null;
         };
         Relationships: Database["public"]["Tables"]["clientes"]["Relationships"];
       };
@@ -22,18 +40,21 @@ export type ExtendedDatabase = Database & {
           etapa_atual: string | null;
           custo_estimado: number | null;
           status_obra?: string | null;
+          user_id: string | null;
         };
         Insert: Database["public"]["Tables"]["trabalhos"]["Insert"] & {
           conclusao_percentual?: number | null;
           etapa_atual?: string | null;
           custo_estimado?: number | null;
           status_obra?: string | null;
+          user_id?: string | null;
         };
         Update: Database["public"]["Tables"]["trabalhos"]["Update"] & {
           conclusao_percentual?: number | null;
           etapa_atual?: string | null;
           custo_estimado?: number | null;
           status_obra?: string | null;
+          user_id?: string | null;
         };
         Relationships: Database["public"]["Tables"]["trabalhos"]["Relationships"];
       };
@@ -45,6 +66,7 @@ export type ExtendedDatabase = Database & {
           quantidade: number | null;
           observacoes: string | null;
           criado_em: string;
+          user_id: string | null;
         };
         Insert: {
           id?: string;
@@ -53,6 +75,7 @@ export type ExtendedDatabase = Database & {
           quantidade?: number | null;
           observacoes?: string | null;
           criado_em?: string;
+          user_id?: string | null;
         };
         Update: {
           id?: string;
@@ -61,8 +84,21 @@ export type ExtendedDatabase = Database & {
           quantidade?: number | null;
           observacoes?: string | null;
           criado_em?: string;
+          user_id?: string | null;
         };
         Relationships: [];
+      };
+      funcionarios: {
+        Row: Database["public"]["Tables"]["funcionarios"]["Row"] & {
+          user_id: string | null;
+        };
+        Insert: Database["public"]["Tables"]["funcionarios"]["Insert"] & {
+          user_id?: string | null;
+        };
+        Update: Database["public"]["Tables"]["funcionarios"]["Update"] & {
+          user_id?: string | null;
+        };
+        Relationships: Database["public"]["Tables"]["funcionarios"]["Relationships"];
       };
       orcamentos: {
         Row: Database["public"]["Tables"]["orcamentos"]["Row"] & {
@@ -71,6 +107,7 @@ export type ExtendedDatabase = Database & {
           data_prevista_inicio: string | null;
           exclusoes: string | null;
           responsabilidades: string | null;
+          user_id: string | null;
         };
         Insert: Database["public"]["Tables"]["orcamentos"]["Insert"] & {
           condicoes_pagamento?: string | null;
@@ -78,6 +115,7 @@ export type ExtendedDatabase = Database & {
           data_prevista_inicio?: string | null;
           exclusoes?: string | null;
           responsabilidades?: string | null;
+          user_id?: string | null;
         };
         Update: Database["public"]["Tables"]["orcamentos"]["Update"] & {
           condicoes_pagamento?: string | null;
@@ -85,6 +123,7 @@ export type ExtendedDatabase = Database & {
           data_prevista_inicio?: string | null;
           exclusoes?: string | null;
           responsabilidades?: string | null;
+          user_id?: string | null;
         };
         Relationships: Database["public"]["Tables"]["orcamentos"]["Relationships"];
       };
@@ -99,6 +138,7 @@ export type ExtendedDatabase = Database & {
           categoria: string | null;
           subcategoria: string | null;
           criado_em: string;
+          user_id: string | null;
         };
         Insert: {
           id?: string;
@@ -110,6 +150,7 @@ export type ExtendedDatabase = Database & {
           categoria?: string | null;
           subcategoria?: string | null;
           criado_em?: string;
+          user_id?: string | null;
         };
         Update: {
           id?: string;
@@ -121,6 +162,7 @@ export type ExtendedDatabase = Database & {
           categoria?: string | null;
           subcategoria?: string | null;
           criado_em?: string;
+          user_id?: string | null;
         };
         Relationships: [
           {
@@ -143,6 +185,7 @@ export type ExtendedDatabase = Database & {
           custo_total: number;
           observacoes: string | null;
           criado_em: string;
+          user_id: string | null;
         };
         Insert: {
           id?: string;
@@ -154,6 +197,7 @@ export type ExtendedDatabase = Database & {
           custo_total: number;
           observacoes?: string | null;
           criado_em?: string;
+          user_id?: string | null;
         };
         Update: {
           id?: string;
@@ -165,6 +209,7 @@ export type ExtendedDatabase = Database & {
           custo_total?: number;
           observacoes?: string | null;
           criado_em?: string;
+          user_id?: string | null;
         };
         Relationships: [];
       };
@@ -180,6 +225,7 @@ export type ExtendedDatabase = Database & {
           custo_unitario: number;
           funcionario_id: string | null;
           criado_em: string;
+          user_id: string | null;
         };
         Insert: {
           id?: string;
@@ -192,6 +238,7 @@ export type ExtendedDatabase = Database & {
           custo_unitario?: number;
           funcionario_id?: string | null;
           criado_em?: string;
+          user_id?: string | null;
         };
         Update: {
           id?: string;
@@ -204,6 +251,7 @@ export type ExtendedDatabase = Database & {
           custo_unitario?: number;
           funcionario_id?: string | null;
           criado_em?: string;
+          user_id?: string | null;
         };
         Relationships: [
           {

@@ -22,41 +22,47 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 
-// ─── Taxonomia da Construção ─────────────────────────────────────────────────
+// ─── Taxonomia de Serralheria Metálica ───────────────────────────────────────
 
 const CATEGORIAS: Record<string, { subs: string[]; unidade: string; margem: number; cor: string; icone: string }> = {
-  "Civil / Acabamento": { 
-    subs: ["Piso", "Paver", "Contrapiso", "Reboco", "Gesso", "Pintura", "Reparos", "Geral"], 
-    unidade: "m²", margem: 0, cor: "amber", icone: "🏗️" 
+  "Estruturas Metálicas": {
+    subs: ["Mezanino", "Galpão", "Cobertura", "Passarela", "Plataforma", "Escada Industrial", "Geral"],
+    unidade: "kg", margem: 0, cor: "orange", icone: "🏗️"
   },
-  "Hidráulica": { 
-    subs: ["Vazamentos", "Torneiras", "Instalações", "Desentupimento", "Caixas/Cisternas", "Bombas/Pressurizadores", "Hidrojateamento", "Geral"], 
-    unidade: "pt", margem: 0, cor: "blue", icone: "🚿" 
+  "Portões e Cancelas": {
+    subs: ["Portão Deslizante", "Portão Basculante", "Portão Pivotante", "Cancela", "Automação", "Geral"],
+    unidade: "un", margem: 0, cor: "zinc", icone: "🚪"
   },
-  "Impermeabilização": { 
-    subs: ["Lajes/Coberturas", "Paredes", "Banheiros/Áreas Frias", "Vedação", "Geral"], 
-    unidade: "m²", margem: 0, cor: "cyan", icone: "💧" 
+  "Escadas e Corrimãos": {
+    subs: ["Escada Reta", "Escada Caracol", "Corrimão Externo", "Corrimão Interno", "Guarda-corpo", "Geral"],
+    unidade: "m", margem: 0, cor: "slate", icone: "🪜"
   },
-  "Instalações": { 
-    subs: ["Portas/Janelas", "Ferragens", "Acessórios/Suportes", "Hidráulica Aparente", "Geral"], 
-    unidade: "un", margem: 0, cor: "violet", icone: "🚪" 
+  "Grades e Proteções": {
+    subs: ["Grade de Janela", "Grade de Porta", "Alambrado", "Tela Soldada", "Proteção Antifurto", "Geral"],
+    unidade: "m²", margem: 0, cor: "amber", icone: "🔒"
   },
-  "Limpeza Técnica": { 
-    subs: ["Calhas/Drenagem", "Tanques/Caixas", "Fachada/Pisos", "Pós-Obra", "Hidrojateamento", "Geral"], 
-    unidade: "un", margem: 0, cor: "green", icone: "🧹" 
+  "Coberturas Metálicas": {
+    subs: ["Telhado Simples", "Telhado com Calha", "Marquise", "Pergolado", "Toldo Metálico", "Geral"],
+    unidade: "m²", margem: 0, cor: "blue", icone: "🏠"
   },
-  "Telhados": { 
-    subs: ["Revisão", "Troca/Ajuste", "Vedação/Isolamento", "Limpeza", "Geral"], 
-    unidade: "m²", margem: 0, cor: "orange", icone: "🏠" 
+  "Serralheria Fina": {
+    subs: ["Janela de Ferro", "Basculante", "Treliça Decorativa", "Gradil Ornamental", "Letreiro Metálico", "Geral"],
+    unidade: "un", margem: 0, cor: "violet", icone: "✨"
+  },
+  "Manutenção": {
+    subs: ["Soldagem", "Pintura Anticorrosiva", "Substituição de Peças", "Regulagem", "Revisão Geral"],
+    unidade: "serv", margem: 0, cor: "green", icone: "🔧"
   },
 };
 
 const TODAS_CATEGORIAS = Object.keys(CATEGORIAS);
 
-const UNIDADES = ["un", "m²", "m³", "m", "pt", "serv", "kg", "h", "vb", "cx", "sc", "l", "pç", "bd"];
+const UNIDADES = ["un", "m²", "m", "kg", "barra", "ml", "conj", "vb", "serv", "h", "pç"];
 const TIPOS_SERVICO: { value: TipoServico; label: string }[] = [
-  { value: "preventivo",  label: "Preventivo" },
-  { value: "corretivo",   label: "Corretivo" },
+  { value: "fabricacao",  label: "Fabricação" },
+  { value: "instalacao",  label: "Instalação" },
+  { value: "manutencao",  label: "Manutenção" },
+  { value: "reforma",     label: "Reforma" },
   { value: "emergencial", label: "Emergencial" },
 ];
 const DIFICULDADES: { value: NivelDificuldade; label: string }[] = [
@@ -71,8 +77,10 @@ const formatCurrency = (val: number) =>
 const MARGEM_COR = (m: number) => m >= 40 ? "text-emerald-600" : m >= 25 ? "text-amber-600" : "text-destructive";
 
 const BADGE_TIPO: Record<TipoServico, string> = {
-  preventivo:  "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
-  corretivo:   "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+  fabricacao:  "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
+  instalacao:  "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+  manutencao:  "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
+  reforma:     "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
   emergencial: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
 };
 const BADGE_DIFIC: Record<NivelDificuldade, string> = {
@@ -97,7 +105,8 @@ export default function CatalogoServicos() {
   const emptyForm = {
     nome: "", unidade_padrao: "un", prestador_padrao_id: "",
     categoria: "", subcategoria: "",
-    custo_material: 0, custo_mao_obra: 0, custo_deslocamento: 0, custo_extras: 0,
+    custo_material: 0, custo_mao_obra: 0, custo_deslocamento: 0,
+    custo_galvanizacao: 0, custo_pintura: 0, custo_corte_dobra: 0,
     margem_desejada: 35, valor_base_sugerido: 0, custo_padrao: 0,
     tipo_servico: "" as string, dificuldade: "" as string,
     tempo_medio: "", equipe_necessaria: "",
@@ -105,7 +114,7 @@ export default function CatalogoServicos() {
   const [form, setForm] = useState(emptyForm);
 
   // Custo total calculado ao vivo
-  const custoTotal = form.custo_material + form.custo_mao_obra + form.custo_deslocamento + form.custo_extras;
+  const custoTotal = form.custo_material + form.custo_mao_obra + form.custo_deslocamento + form.custo_galvanizacao + form.custo_pintura + form.custo_corte_dobra;
   const vendaCalculada = form.margem_desejada < 100
     ? custoTotal / (1 - form.margem_desejada / 100)
     : custoTotal * 2;
@@ -142,7 +151,9 @@ export default function CatalogoServicos() {
         prestador_padrao_id: item.prestador_padrao_id || "",
         categoria: item.categoria || "", subcategoria: item.subcategoria || "",
         custo_material: item.custo_material, custo_mao_obra: item.custo_mao_obra,
-        custo_deslocamento: item.custo_deslocamento, custo_extras: item.custo_extras,
+        custo_deslocamento: item.custo_deslocamento,
+        custo_galvanizacao: item.custo_galvanizacao, custo_pintura: item.custo_pintura,
+        custo_corte_dobra: item.custo_corte_dobra,
         margem_desejada: item.margem_desejada, valor_base_sugerido: item.valor_base_sugerido,
         custo_padrao: item.custo_padrao,
         tipo_servico: item.tipo_servico || "", dificuldade: item.dificuldade || "",
@@ -171,7 +182,9 @@ export default function CatalogoServicos() {
       prestador_padrao_id: form.prestador_padrao_id || null,
       categoria: form.categoria || null, subcategoria: form.subcategoria || null,
       custo_material: form.custo_material, custo_mao_obra: form.custo_mao_obra,
-      custo_deslocamento: form.custo_deslocamento, custo_extras: form.custo_extras,
+      custo_deslocamento: form.custo_deslocamento,
+      custo_galvanizacao: form.custo_galvanizacao, custo_pintura: form.custo_pintura,
+      custo_corte_dobra: form.custo_corte_dobra,
       custo_padrao: custoTotal,
       margem_desejada: form.margem_desejada, valor_base_sugerido: parseFloat(vendaCalculada.toFixed(2)),
       tipo_servico: (form.tipo_servico || null) as TipoServico | null,
@@ -427,10 +440,12 @@ export default function CatalogoServicos() {
                   <p className="text-xs text-muted-foreground font-barlow italic">Quebre o custo em partes para uma precificação cirúrgica.</p>
                   <div className="grid grid-cols-2 gap-3">
                     {[
-                      { key: "custo_material", label: "Material (R$)", color: "" },
-                      { key: "custo_mao_obra", label: "Mão de Obra (R$)", color: "" },
-                      { key: "custo_deslocamento", label: "Deslocamento (R$)", color: "" },
-                      { key: "custo_extras", label: "Extras / Risco (R$)", color: "" },
+                      { key: "custo_material",     label: "Material (R$)" },
+                      { key: "custo_mao_obra",      label: "Mão de Obra (R$)" },
+                      { key: "custo_deslocamento",  label: "Deslocamento (R$)" },
+                      { key: "custo_galvanizacao",  label: "Galvanização (R$)" },
+                      { key: "custo_pintura",       label: "Pintura / Jateamento (R$)" },
+                      { key: "custo_corte_dobra",   label: "Corte e Dobra (R$)" },
                     ].map(({ key, label }) => (
                       <div key={key} className="space-y-1.5">
                         <Label className="uppercase text-[10px] font-bold tracking-widest text-muted-foreground">{label}</Label>

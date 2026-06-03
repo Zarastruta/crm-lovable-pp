@@ -13,7 +13,7 @@ import { WhatsAppParserModal } from "@/components/modals/WhatsAppParserModal";
 import { SkeletonList } from "@/components/shared/SkeletonCard";
 
 export default function Orcamentos() {
-  const { orcamentos, condominios, clientes, dataLoading, batchUpdateOrcamentosStatus } = useApp();
+  const { orcamentos, locais, clientes, dataLoading, batchUpdateOrcamentosStatus } = useApp();
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("todos");
@@ -43,7 +43,7 @@ export default function Orcamentos() {
     }
   }, [orcamentos, dataLoading, batchUpdateOrcamentosStatus]);
 
-  const getCondominio = (id: string | null) => id ? condominios.find((c) => c.id === id) : undefined;
+  const getCondominio = (id: string | null) => id ? locais.find((l) => l.id === id) : undefined;
   const getCliente = (id: string | null) => id ? clientes.find((c) => c.id === id) : undefined;
 
   // Marca automaticamente orçamentos vencidos na visualização (sem alterar BD)

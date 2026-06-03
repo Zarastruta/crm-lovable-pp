@@ -14,7 +14,7 @@ export function Header({ onMenuClick }: HeaderProps) {
   const [buscaOpen, setBuscaOpen] = useState(false);
 
   const openBusca = useCallback(() => setBuscaOpen(true), []);
-  const newTrabalho = useCallback(() => navigate("/trabalhos"), [navigate]);
+  const newTrabalho = useCallback(() => navigate("/os"), [navigate]);
 
   useKeyboardShortcuts([
     { key: "k", ctrl: true, action: openBusca },
@@ -46,11 +46,11 @@ export function Header({ onMenuClick }: HeaderProps) {
 
         <Button
           size="sm"
-          onClick={() => navigate("/trabalhos")}
+          onClick={() => navigate("/os")}
           className="gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90"
         >
           <Plus className="h-4 w-4" />
-          <span className="hidden sm:inline">Novo Trabalho</span>
+          <span className="hidden sm:inline">Nova OS</span>
         </Button>
       </header>
 

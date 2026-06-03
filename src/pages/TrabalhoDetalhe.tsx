@@ -16,20 +16,20 @@ import { Progress } from "@/components/ui/progress";
 export default function TrabalhoDetalhe() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { trabalhos, condominios, clientes, deleteTrabalho, dataLoading } = useApp();
+  const { trabalhos, locais, clientes, deleteTrabalho, dataLoading } = useApp();
   const [editOpen, setEditOpen] = useState(false);
 
   const trabalho = trabalhos.find((t) => t.id === id);
   if (!trabalho) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-muted-foreground gap-3 font-barlow">
-        <p>Trabalho não encontrado.</p>
-        <Button variant="outline" onClick={() => navigate("/trabalhos")}>Voltar</Button>
+        <p>Ordem de Serviço não encontrada.</p>
+        <Button variant="outline" onClick={() => navigate("/os")}>Voltar</Button>
       </div>
     );
   }
 
-  const getCondominio = (id: string | null) => id ? condominios.find((c) => c.id === id) : undefined;
+  const getCondominio = (id: string | null) => id ? locais.find((l) => l.id === id) : undefined;
   const getCliente = (id: string | null) => id ? clientes.find((c) => c.id === id) : undefined;
   
   const cond = getCondominio(trabalho.condominioId);
@@ -44,9 +44,9 @@ export default function TrabalhoDetalhe() {
   const margemLucro = trabalho.valor > 0 ? (lucroEstimado / trabalho.valor) * 100 : 0;
 
   const handleDelete = () => {
-    if (confirm("Excluir este trabalho?")) {
+    if (confirm("Excluir esta OS?")) {
       deleteTrabalho(trabalho.id);
-      navigate("/trabalhos");
+      navigate("/os");
     }
   };
 
@@ -54,13 +54,13 @@ export default function TrabalhoDetalhe() {
     <div className="space-y-6 animate-slide-in pb-10">
       {/* Header */}
       <div className="flex items-center gap-4 flex-wrap border-b border-border pb-5 bg-background sticky top-0 z-10 backdrop-blur-sm">
-        <Button variant="ghost" size="icon" onClick={() => navigate("/trabalhos")} className="shrink-0">
+        <Button variant="ghost" size="icon" onClick={() => navigate("/os")} className="shrink-0">
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-0.5">
             <span className="text-[10px] bg-muted px-2 py-0.5 rounded font-bold uppercase tracking-wider">Serviço #{trabalho.id.slice(0, 5)}</span>
-            <ObraStatusBadge status={trabalho.status_obra ?? "aguardando"} />
+            <ObraStatusBadge status={trabalho.status_obra ?? "Novo"} />
           </div>
           <h1 className="text-2xl font-bold font-oswald uppercase truncate tracking-tight">{trabalho.titulo}</h1>
         </div>
@@ -121,7 +121,7 @@ export default function TrabalhoDetalhe() {
                 <div className="space-y-4">
                   {cond && (
                     <InfoRow icon={Building2} label="Condomínio/Local">
-                      <button onClick={() => navigate(`/condominios/${cond.id}`)} className="text-primary font-bold hover:underline font-barlow text-sm block truncate">
+                      <button onClick={() => navigate(`/locais/${cond.id}`)} className="text-primary font-bold hover:underline font-barlow text-sm block truncate">
                         {cond.nome}
                       </button>
                     </InfoRow>

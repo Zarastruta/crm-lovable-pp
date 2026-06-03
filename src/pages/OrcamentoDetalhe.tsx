@@ -24,7 +24,7 @@ import { OrcamentoItem } from "@/types";
 export default function OrcamentoDetalhe() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { orcamentos, condominios, clientes, deleteOrcamento, updateOrcamento, addTrabalho, refreshAll } = useApp();
+  const { orcamentos, locais, clientes, deleteOrcamento, updateOrcamento, addTrabalho, refreshAll } = useApp();
   const [editOpen, setEditOpen] = useState(false);
   const [convertDialogOpen, setConvertDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -54,7 +54,7 @@ export default function OrcamentoDetalhe() {
     );
   }
 
-  const cond = orcamento.condominioId ? condominios.find((c) => c.id === orcamento.condominioId) : undefined;
+  const cond = orcamento.condominioId ? locais.find((l) => l.id === orcamento.condominioId) : undefined;
   const cliente = orcamento.clienteId ? clientes.find((c) => c.id === orcamento.clienteId) : undefined;
   const sindico = orcamento.sindicoId ? clientes.find((c) => c.id === orcamento.sindicoId) : undefined;
 
@@ -62,7 +62,7 @@ export default function OrcamentoDetalhe() {
 
   const handleExportPdf = () => {
     try {
-      toast.info("Gerando documento PratesPaiva...");
+      toast.info("Gerando documento Vulcano...");
       generateOrcamentoPdf(orcamento, items, cliente, cond, ocultarUnitarios, sindico);
       toast.success("PDF gerado com sucesso!");
     } catch (error) {
@@ -190,7 +190,7 @@ export default function OrcamentoDetalhe() {
               <div className="space-y-4">
                 {cond && (
                   <InfoRow icon={Building2} label="Local/Condomínio">
-                    <button onClick={() => navigate(`/condominios/${cond.id}`)} className="text-primary font-bold hover:underline text-sm font-barlow">
+                    <button onClick={() => navigate(`/locais/${cond.id}`)} className="text-primary font-bold hover:underline text-sm font-barlow">
                       {cond.nome}
                     </button>
                   </InfoRow>
